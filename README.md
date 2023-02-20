@@ -7,6 +7,8 @@ The modifications are required to run on the testbeam ntuples created using the 
 https://github.com/sameasy/TestBeamReconstruction/tree/myTESTS
 
 To run: \
+Clone inside a cmssw release inside src \
+cmsenv \
 make \
 sh runclustering.sh 
 
@@ -14,8 +16,7 @@ Brief description of the scripts:\
 Runclustering.cc  : Main analyzer code \
 TBNtupleAnalyzer.h : Input tree variables \
 CLUEAlgo.h : clue2D \
-CLUE3DAlgo.h : clue3D (in x-y-L space at this point)\
+CLUE3DAlgo.h : clue3D (in x-y-L space at this point)
 
 Produces tree with hits and 2D-3D cluster properties which can be plotted using notebooks inside plotter folder \
-
 Requires uproot, numpy 
