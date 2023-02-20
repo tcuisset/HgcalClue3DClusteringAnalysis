@@ -16,4 +16,6 @@ TBNtupleAnalyzer.h : Input tree variables \
 CLUEAlgo.h : clue2D \
 CLUE3DAlgo.h : clue3D (in x-y-L space at this point)\
 
-Produces tree with hits and 2D-3D cluster properties which can be plotted using notebooks inside plotter folder
+Produces tree with hits and 2D-3D cluster properties which can be plotted using notebooks inside plotter folder \
+
+Requires uproot, numpy 
