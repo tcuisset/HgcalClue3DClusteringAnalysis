@@ -7,8 +7,8 @@
 #include "PointsCloud.h"
 #include "Cluster.h"
 
+///< 2-d distance on the layer
 inline float distance(PointsCloud &points, int i, int j) {
-  // 2-d distance on the layer
   if (points.layer[i] == points.layer[j]) {
     const float dx = points.x[i] - points.x[j];
     const float dy = points.y[i] - points.y[j];
@@ -46,6 +46,7 @@ inline void updateLayersAndEnergies(PointsCloud &points,
   }
 }
 
+///< For all points in PointsCloud, add the index of the point into the correct bin of LayerTiles
 void compute_histogram(std::array<LayerTiles, NLAYERS> &d_hist,
                        PointsCloud &points) {
   //    std::cout<<"points.n "<<points.n<<std::endl;
@@ -56,6 +57,10 @@ void compute_histogram(std::array<LayerTiles, NLAYERS> &d_hist,
   }
 };
 
+/**
+ * Compute rho, the local energy density, for each point of the cloud (in 2D)
+ * \param dc distance parameters (array as depends on layer)
+*/
 void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
                        PointsCloud &points, const float dc[]) {
   // loop over all points
@@ -74,14 +79,14 @@ void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
       for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
         // get the id of this bin
         int binId = lt.getGlobalBinByBin(xBin, yBin);
-        // get the size of this bin
+        // get the number of hits in this bin ("bin size")
         int binSize = lt[binId].size();
 
         // iterate inside this bin
         for (int binIter = 0; binIter < binSize; binIter++) {
-          unsigned int j = lt[binId][binIter];
+          unsigned int j = lt[binId][binIter]; //Hit index
           // query N_{dc_effective}(i)
-          float dist_ij = distance(points, i, j);
+          float dist_ij = distance(points, i, j); //Distance between initial hit (i) and searched hit (j)
           if (dist_ij <= dc_effective) {
             // sum weights within N_{dc_effective}(i)
             points.rho[i] += (i == j ? 1.f : 0.5f) * points.weight[j];
@@ -92,6 +97,11 @@ void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
   }    // end of loop over points
 };
 
+/**
+ * Compute, for each hit, the distance to nearest higher (and set the ID of the nearest higher)
+ * \param dc distance parameters (array as depends on layer)
+ * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
+*/
 void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
                                 PointsCloud &points, float outlierDeltaFactor,
                                 const float dc[]) {
@@ -100,7 +110,7 @@ void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
     float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
     float dm = outlierDeltaFactor * dc_effective;
     // default values of delta and nearest higher for i
-    float delta_i = std::numeric_limits<float>::max();
+    float delta_i = std::numeric_limits<float>::max(); //Minimum value of distance yet found in the loop
     int nearestHigher_i = -1;
     float xi = points.x[i];
     float yi = points.y[i];
@@ -144,13 +154,21 @@ void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
   }  // end of loop over points
 };
 
+/**
+ * For all points, compute whether it is a seed, outlier, or follower (in this case register to the nearest higher)
+ * Then expand clusters from seeds (setting point.clusterIndex for all points in each cluster)
+ * \param dc distance parameters (array as depends on layer)
+ * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
+ * \param rhoc critical energy density parameters (array as depends on layer)
+ * \return number of clusters created
+*/
 int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
                            const float dc[],
                            const float rhoc[]) {
   int nClusters = 0;
 
   // find cluster seeds and outlier
-  std::vector<int> localStack;
+  std::vector<int> localStack; ///< Stack holding points IDs, used for filling in clusterIndex. Initialized to all seeds
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
     float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
@@ -162,7 +180,9 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
     float rhoi = points.rho[i];
 
     // determine seed or outlier
+    // Seed if : far enough from nearest higher && enough energy density
     bool isSeed = (deltai > dc_effective) && (rhoi >= rhoc_effective);
+    // Outlier if : very far from nearest higher && low energy density
     bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       // set isSeed as 1
@@ -197,6 +217,11 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
   return nClusters;
 };
 
+/**
+ * Compute position and total weight of a given cluster
+ * Position is computed by weighted average of points positions (for x and y). For z just use the z of all hits (same since 2D cluster)
+ * Weights are computed using an affine log scale of hits weights (ie hit energy).
+*/
 void calculatePosition(const PointsCloud & points, Cluster & cl) {
   constexpr float thresholdW0 = 2.9f;
   float total_weight = 0.f;
@@ -218,7 +243,7 @@ void calculatePosition(const PointsCloud & points, Cluster & cl) {
 
   // TODO: this is recomputing everything twice and overwriting the position with log weighting position
   float total_weight_log = 0.f;
-  float x_log = 0.f;
+  float x_log = 0.f; ///< Sum of all x positions of clusters weighted 
   float y_log = 0.f;
   for (auto i : cl.hits()) {
 //    //for silicon only just use 1+6 cells = 1.3cm for all thicknesses
@@ -244,7 +269,11 @@ void calculatePosition(const PointsCloud & points, Cluster & cl) {
   }
 }
 
-
+/**
+ * Build all Cluster objects holding cluster information
+ * \param totalClusters the nb of clusters generated by the algorithm (return value of \a findAndAssign_clusters )
+ * \param points the PointsCloud ( *TODO* why is this passed by value ?)
+*/
 std::vector<Cluster> getClusters(int totalClusters, PointsCloud points) {
   std::vector<Cluster> clusters(totalClusters);
 

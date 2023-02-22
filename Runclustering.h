@@ -21,16 +21,20 @@
 
 class Runclustering : public TBNtupleAnalyzer {
  public:
+  /**
+   * \param inputFileList path to a file listing all paths to the input root files
+   * \param energy not used (set in EventLoop)
+  */
   Runclustering(const TString &inputFileList = "foo.txt",
                   const char *outFileName = "histo.root",
                   const char *dataset = "data", const char *config = "alpha",
                   const char *energy = "-1"); 
                                               
   ~Runclustering();
-  Bool_t FillChain(TChain *chain, const TString &inputFileList);
+  Bool_t FillChain(TChain *chain, const TString &inputFileList); ///< Add all trees from the file list to the given TChain
   Long64_t LoadTree(Long64_t entry);
-  void EventLoop(const char *, const char *);  //, const char *,const char *);
-  void BookHistogram(const char *, const char *, const char *energy);
+  void EventLoop(const char *data, const char *energy);  //, const char *,const char *);
+  void BookHistogram(const char *outFileName, const char *conf, const char *energy); ///< Creates output TFile and histograms
 
   std::vector<bool> *noise_flag;
   TFile *oFile;
@@ -72,7 +76,7 @@ Runclustering::Runclustering(
   }
 
 
-  TBNtupleAnalyzer::Init(tree); 
+  TBNtupleAnalyzer::Init(tree); //Init branch pointers for reading TTree 
 
   BookHistogram(outFileName, config, energy);
 }

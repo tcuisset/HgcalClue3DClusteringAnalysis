@@ -7,60 +7,80 @@
 #include "PointsCloud.h"
 #include "Cluster.h"
 
-#define NLAYER1 1
+#define NLAYER1 1 ///< Index of first layer
 
+/**
+ * Compute the distance between 2 points in PointsCloud in *2D* using (x;y) coordinates only (ignoring z completely)
+ * *TODO* give a better name to this function
+*/
 inline float distance3d(PointsCloud &points, int i, int j) {
-  // 2-d distance on the layer
     const float dx = points.x[i] - points.x[j];
     const float dy = points.y[i] - points.y[j];
     return std::sqrt(dx * dx + dy * dy);
-
 }
 
+/**
+ * Compute rho, the local energy density, for each 2D cluster (in 3D)
+ * Note the way the distance is computed (ignoring layer completely in the calculation of distance) for computing rho
+ * \param dc distance parameters (array as depends on layer)
+ * \param densitySiblingLayers How many layers to consider before and beyond each cluster to compute rho
+*/
 void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
 			 PointsCloud &points, const float dc[], int densitySiblingLayers) {
-  // loop over all points
+  // loop over all 2D clusters
   for (unsigned int i = 0; i < points.n; i++) {
-    int clayer = points.layer[i];
+    int clayer = points.layer[i]; ///< Layer of 2D cluster
     int minLayer = 0;
     int maxLayer = NLAYERS;
+
+    //Loop over layers that are within densitySiblingLayers of current layer
     minLayer = std::max(clayer - densitySiblingLayers, NLAYER1);
     maxLayer = std::min(clayer + densitySiblingLayers, maxLayer);
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
       LayerTiles &lt = d_hist[currentLayer];
       float dc_effective = currentLayer < 41 ? dc[0] : dc[1];
-      // get search box
+      // get search box (2D)
       std::array<int, 4> search_box = lt.searchBox(
 	     points.x[i] - dc_effective, points.x[i] + dc_effective,
 	     points.y[i] - dc_effective, points.y[i] + dc_effective);
       
       // loop over bins in the search box
       for (int xBin = search_box[0]; xBin < search_box[1] + 1; ++xBin) {
-	for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
-	  
-	  // get the id of this bin
-	  int binId = lt.getGlobalBinByBin(xBin, yBin);
-	  // get the size of this bin
-	  int binSize = lt[binId].size();
-	  
-	  // iterate inside this bin
-	  for (int binIter = 0; binIter < binSize; binIter++) {
-	    unsigned int j = lt[binId][binIter];
-	    // query N_{dc_effective}(i)
-	    float dist_ij = distance3d(points, i, j);
-	    //    std::cout<<"dist_ij "<<dist_ij<<std::endl;
-	    
-	    if (dist_ij <= dc_effective) {
-	      // sum weights within N_{dc_effective}(i)
-	      points.rho[i] += (i == j ? 1.f : 0.5f) * points.weight[j];
-	    }
-	  }  // end of interate inside this bin
-	}
+        for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
+          
+          // get the id of this bin
+          int binId = lt.getGlobalBinByBin(xBin, yBin);
+          // get the size of this bin
+          int binSize = lt[binId].size();
+          
+          // iterate inside this bin
+          for (int binIter = 0; binIter < binSize; binIter++) {
+            unsigned int j = lt[binId][binIter];
+            // query N_{dc_effective}(i)
+
+            //This computes the 2D distance between the 2D clusters in x,y (ignoring layer)
+            //ie 2 2D clusters will have the same distance as long as they have same x,y wether they are on the same layer or 2 layers apart
+            // *TODO* Is this intended ?
+            float dist_ij = distance3d(points, i, j);
+            //    std::cout<<"dist_ij "<<dist_ij<<std::endl;
+            
+            if (dist_ij <= dc_effective) {
+              // sum weights within N_{dc_effective}(i)
+              points.rho[i] += (i == j ? 1.f : 0.5f) * points.weight[j];
+            }
+          }  // end of interate inside this bin
+        }
       }  // end of loop over bins in search box
     }  // loop over layers for each point
   }    // end of loop over points
 };
 
+/**
+ * Compute, for each 2D cluster, the distance to nearest higher (and set the ID of the nearest higher)
+ * \param dc distance parameters (array as depends on layer)
+ * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
+ * \param densitySiblingLayers How many layers to consider before and beyond each cluster to search for nearest higher
+*/
 void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
                                 PointsCloud &points, float outlierDeltaFactor,
 				  const float dc[], int densitySiblingLayers) {
@@ -78,13 +98,14 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
     int minLayer = 0;
     int maxLayer = NLAYERS;
     int clayer = points.layer[i];
+
+    //Loop over layers that are within densitySiblingLayers of current layer
     minLayer = std::max(clayer - densitySiblingLayers, NLAYER1);
     maxLayer = std::min(clayer + densitySiblingLayers, maxLayer);
-    
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
       
       
-      // get search box
+      // get search box (2D)
       //      LayerTiles &lt = d_hist[points.layer[currentLayer]];
       LayerTiles &lt = d_hist[currentLayer];
       std::array<int, 4> search_box =
@@ -92,30 +113,30 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
       
       // loop over all bins in the search box
       for (int xBin = search_box[0]; xBin < search_box[1] + 1; ++xBin) {
-	for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
-	  // get the id of this bin
-	  int binId = lt.getGlobalBinByBin(xBin, yBin);
-	  // get the size of this bin
-	  int binSize = lt[binId].size();
-	  
-	  // interate inside this bin
-	  for (int binIter = 0; binIter < binSize; binIter++) {
-	    unsigned int j = lt[binId][binIter];
-	    // query N'_{dm}(i)
-	    bool foundHigher = (points.rho[j] > rho_i);
-	    // in the rare case where rho is the same, use detid
-	    // foundHigher = foundHigher || ((points.rho[j] == rho_i) && (j > i));
-	    float dist_ij = distance3d(points, i, j);
-	    if (foundHigher && dist_ij <= dm) {  // definition of N'_{dm}(i)
-	      // find the nearest point within N'_{dm}(i)
-	      if (dist_ij < delta_i) {
-		// update delta_i and nearestHigher_i
-		delta_i = dist_ij;
-		nearestHigher_i = j;
-	      }
-	    }
-	  }  // end of interate inside this bin
-	}
+        for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
+          // get the id of this bin
+          int binId = lt.getGlobalBinByBin(xBin, yBin);
+          // get the size of this bin
+          int binSize = lt[binId].size();
+          
+          // interate inside this bin
+          for (int binIter = 0; binIter < binSize; binIter++) {
+            unsigned int j = lt[binId][binIter];
+            // query N'_{dm}(i)
+            bool foundHigher = (points.rho[j] > rho_i);
+            // in the rare case where rho is the same, use detid
+            // foundHigher = foundHigher || ((points.rho[j] == rho_i) && (j > i));
+            float dist_ij = distance3d(points, i, j);
+            if (foundHigher && dist_ij <= dm) {  // definition of N'_{dm}(i)
+              // find the nearest point within N'_{dm}(i)
+              if (dist_ij < delta_i) {
+                // update delta_i and nearestHigher_i
+                delta_i = dist_ij;
+                nearestHigher_i = j;
+              }
+            }
+          }  // end of interate inside this bin
+        }
       }  // end of loop over bins in search box
     } // end of loop over layers
     points.delta[i] = delta_i;
@@ -123,6 +144,14 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
   }  // end of loop over points
 };
 
+/**
+ * For all 2D clusters, compute whether it is a seed, outlier, or follower (in this case register to the nearest higher)
+ * Then expand clusters from seeds (setting point.clusterIndex for all points in each cluster)
+ * \param dc distance parameters (array as depends on layer)
+ * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
+ * \param rhoc critical energy density parameters (array as depends on layer)
+ * \return number of 3D clusters created
+*/
 int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
                            const float dc[],
                            const float rhoc[]) {
@@ -176,6 +205,11 @@ int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
   return nClusters;
 };
 
+/**
+ * Compute position and total weight of a given cluster
+ * Position is computed by weighted average of points positions (for x and y and z).
+ * Weights are computed using an affine log scale of hits weights (ie hit energy).
+*/
 void calculatePosition3d(const PointsCloud & points, Cluster & cl) {
   constexpr float thresholdW0 = 2.9f;
   float total_weight = 0.f;
@@ -227,7 +261,12 @@ void calculatePosition3d(const PointsCloud & points, Cluster & cl) {
   }
 }
 
-
+/**
+ * Build all Cluster objects holding 3D cluster information
+ * Cluster layer is undefined (since it is a 3D cluster)
+ * \param totalClusters the nb of clusters generated by the algorithm (return value of \a findAndAssign_clusters3d )
+ * \param points the PointsCloud ( *TODO* why is this passed by value ?)
+*/
 std::vector<Cluster> getClusters3d(int totalClusters, PointsCloud points) {
   std::vector<Cluster> clusters(totalClusters);
 

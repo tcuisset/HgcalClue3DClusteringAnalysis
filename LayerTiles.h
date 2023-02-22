@@ -8,6 +8,9 @@
 
 #include "LayerTilesConstants.h"
 
+/**
+ * 2D layer of tiles, implementing binning
+*/
 class LayerTiles {
  public:
   LayerTiles() {
@@ -22,6 +25,7 @@ class LayerTiles {
     }
   }
 
+  ///< Add to the bin corresponding to coordinates (x;y) the index of hit i
   void fill(float x, float y, int i) {
     layerTiles_[getGlobalBin(x, y)].push_back(i);
   }
@@ -50,10 +54,12 @@ class LayerTiles {
     return getXBin(x) + getYBin(y) * LayerTilesConstants::nColumns;
   }
 
+  ///< Map bin (x;y) coordinates to internal global bin number
   int getGlobalBinByBin(int xBin, int yBin) const {
     return xBin + yBin * LayerTilesConstants::nColumns;
   }
 
+  ///< Get box in bin numbers from box in space coordinates
   std::array<int, 4> searchBox(float xMin, float xMax, float yMin, float yMax) {
     int xBinMin = getXBin(xMin);
     int xBinMax = getXBin(xMax);
@@ -73,6 +79,10 @@ class LayerTiles {
   }
 
  private:
+  /**
+   * Outer vector : indexed by global bin number
+   * Inner vector : list of hit ID in bin
+  */
   std::vector<std::vector<int>> layerTiles_;
 };
 

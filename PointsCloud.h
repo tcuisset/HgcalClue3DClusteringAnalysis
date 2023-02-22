@@ -5,9 +5,14 @@
 #include "Cluster.h"
 
 
+/**
+ * List of points, holding for each point its position, layer nb, etc 
+ * as well as output of CLUE algorithm for each point (rho, delta, nearest higher, ...)
+*/
 struct PointsCloud {
   PointsCloud() = default;
 
+  ///< 
   void resizeOutputContainers(unsigned int const& nPoints) {
     rho.resize(nPoints, 0.);
     delta.resize(nPoints, -1.);
@@ -37,19 +42,23 @@ struct PointsCloud {
   std::vector<float> y;
   std::vector<float> z;
   std::vector<unsigned int> layer;
-  std::vector<float> weight;
+  std::vector<float> weight; ///< Weights of all points (ie energy)
 
-  // Output variables
-  std::vector<float> rho;
-  std::vector<float> delta;
-  std::vector<int> nearestHigher;
-  std::vector<std::vector<int>> followers;
-  std::vector<int> isSeed;
-  std::vector<int> clusterIndex;
+  // Output variables : vectors of size n
+  std::vector<float> rho; ///< Local energy density
+  std::vector<float> delta; ///< Distance to nearest highest
+  std::vector<int> nearestHigher; ///< ID of nearest highest
+  std::vector<std::vector<int>> followers; ///< List of points that follow this point (ie points which are neither seeds nor outliers and for which we are the nearest higher)
+  std::vector<int> isSeed; ///< Is the point a seed
+  std::vector<int> clusterIndex; ///< ID of the cluster this point is member of
 
-  unsigned int n;
+  unsigned int n; ///< Size of output variables vectors, usually same as input
 };
 
+
+/**
+ * STructure holding all informations for all clusters (position of cluster, .., and all hits ID contained in each cluster)
+*/
 struct ClustersSoA {
   ClustersSoA() = default;
 
@@ -83,8 +92,8 @@ struct ClustersSoA {
   std::vector<float> z;
   std::vector<float> energy;
   std::vector<int> layer;
-  std::vector<int> size;
-  std::vector<std::vector<int>> hitidxs;
+  std::vector<int> size; ///< Number of hits per cluster
+  std::vector<std::vector<int>> hitidxs; ///< List of hits IDs per cluster
 
 
 };

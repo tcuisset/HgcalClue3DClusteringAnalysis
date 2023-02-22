@@ -1,6 +1,9 @@
 #ifndef CLUSTER_H
 #define CLUSTER_H
 
+/**
+ * Cluster (2D) of hits, holding a list of hits ID belonging to this cluster
+*/
 class Cluster {
   public:
     Cluster():energy_(0.f), x_(0.f), y_(0.f), z_(0.f), layer_(-1) {};
@@ -45,13 +48,13 @@ class Cluster {
   const std::vector<int> & hits() const { return hits_;}
 
   private:
-    std::vector<int> hits_;
-    float energy_;
+    std::vector<int> hits_; ///< List of all hits IDs belonging to this cluster
+    float energy_; ///< Energy of cluster : sum of all hits energies (eventually rescaled by layer, if addEnergyAndRescale is called)
     float x_;
     float y_;
     float z_;
 
-    int layer_;
+    int layer_; ///< Layer of the cluster (this is a 2D cluster)
 };
 
 #endif

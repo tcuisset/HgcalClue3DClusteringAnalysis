@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
          << "energy" << endl;
     return -1;
   }
-  const char *inputFileList = argv[1];
+  const char *inputFileList = argv[1]; //List of input files produced by TestBeamReconstruction
   const char *outFileName = argv[2];
   const char *data = argv[3];
   const char *config = argv[4];
@@ -89,8 +89,8 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
 
   // Create a unique PointsCloud object and (re)-use it to fill the output
   // ntuple.
-  PointsCloud pcloud;
-  PointsCloud pcloud2d;
+  PointsCloud pcloud; ///< PointsCloud of all hits per event (3D)
+  PointsCloud pcloud2d; ///< PointsCloud of all 2D clusters
 
   // Create a SoA for the output clusters
   ClustersSoA clusters_soa;
@@ -152,7 +152,8 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
 
 
     // Compute clusters using CLUE
-    std::array<LayerTiles, NLAYERS> tiles;
+    //NLAYERS defined in LayersTilesConstants
+    std::array<LayerTiles, NLAYERS> tiles; ///< Array of LayerTiles (2D layer of tiles) for each layer
     //    constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
     constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
     constexpr float dc[2] = {1.3f, 3.f * sqrt(2.f) + 0.1};
@@ -179,13 +180,12 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
     clusters_soa.load(clusters);
 
     // Compute clusters using CLUE3D [similar sequence as the 2D part, starting pointcloud here composed of the 2D clusters just made above]
-    // define range of layers +- layer# of a point  
-    constexpr int densitySiblingLayers = 2;
+    constexpr int densitySiblingLayers = 2; ///< define range of layers +- layer# of a point  
     std::array<LayerTiles, NLAYERS> tiles2d;
     pcloud2d.x = clusters_soa.x ;
     pcloud2d.y = clusters_soa.y ;
     pcloud2d.z = clusters_soa.z ;
-    vector<int> clusters_soao ;
+    vector<int> clusters_soao ; ///< Layer of each 2D cluster, indexed by cluster ID
     clusters_soao = clusters_soa.layer;
     std::vector<unsigned int> clusters_soau(std::begin(clusters_soao), std::end(clusters_soao));
     pcloud2d.layer = clusters_soau ;
