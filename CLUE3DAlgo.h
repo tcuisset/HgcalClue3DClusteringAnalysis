@@ -140,8 +140,8 @@ int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
     float deltai = points.delta[i];
     float rhoi = points.rho[i];
     // determine seed or outlier
-    bool isSeed = (deltai > dc_effective) and (rhoi >= rhoc_effective);
-    bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) and (rhoi < rhoc_effective);
+    bool isSeed = (deltai > dc_effective) && (rhoi >= rhoc_effective);
+    bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       //std::cout<<"found seed"<<std::endl;  
     // set isSeed as 1

@@ -162,8 +162,8 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
     float rhoi = points.rho[i];
 
     // determine seed or outlier
-    bool isSeed = (deltai > dc_effective) and (rhoi >= rhoc_effective);
-    bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) and (rhoi < rhoc_effective);
+    bool isSeed = (deltai > dc_effective) && (rhoi >= rhoc_effective);
+    bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       // set isSeed as 1
       points.isSeed[i] = 1;
