@@ -26,15 +26,6 @@ branch: impactY_shifted        1672162
 * NRechits :branch entirely identical for whole event with nb of reconstructed hits
 
 # Format of output
-## 1st output root file
-filename as parameter
-
-### TH1F beamEn
-one-bin histogram with beam energy
-
-### TH1F nrechit
-one-bin histogram with number of reconstructed hits
-
 ## 2nd output root file : CLUE_clusters.root
 one TTree name clusters
 rechits_* -> PointsCloud (vector branch) :
