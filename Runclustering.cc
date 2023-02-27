@@ -36,33 +36,21 @@ void dumpSoA(const PointsCloud & points) {
 
 int main(int argc, char *argv[]) 
 {
-  if (argc < 5) {
-    cerr << "Please give 5 arguments "
+  if (argc < 2) {
+    cerr << "Please give 2 arguments "
          << "runList "
          << " "
-         << "outputFileName"
-         << " "
-         << "dataset"
-         << " "
-         << "configuration"
-         << " "
-         << "energy" << endl;
+         << "outputFileName" << endl;
     return -1;
   }
   const char *inputFileList = argv[1]; //List of input files produced by TestBeamReconstruction
   const char *outFileName = argv[2];
-  const char *data = argv[3];
-  const char *config = argv[4];
-  const char *energy = argv[5];
-  Runclustering tbCLUS(inputFileList, outFileName, data, config, energy);
-  cout << "dataset " << data << " " << endl;
-  cout << "configuration " << config << " " << endl;
-  cout << "energy  " << energy << " " << endl;
-  tbCLUS.EventLoop(data, energy);
+  Runclustering tbCLUS(inputFileList, outFileName);
+  tbCLUS.EventLoop();
   return 0;
 }
 
-void Runclustering::EventLoop(const char *data, const char *energy) {
+void Runclustering::EventLoop() {
 
   bool NTUPLEOUT = false;
   if (fChain == 0) return;
@@ -71,7 +59,7 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
   Long64_t hgc_jentry = 0;
 
   cout << "nentries " << nentries << endl;
-  cout << "Analyzing dataset " << data << " " << endl;
+  cout << "Analyzing dataset " << endl;
 
   Long64_t nb = 0;
   int decade = 0;
@@ -84,7 +72,7 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
   
   Long64_t jentry;
   
-  TFile *f = new TFile("CLUE_clusters.root","RECREATE");
+  TFile *f = output_file_;
   TTree clusters_tree("clusters", "clusters");
 
   // Create a unique PointsCloud object and (re)-use it to fill the output
@@ -97,9 +85,11 @@ void Runclustering::EventLoop(const char *data, const char *energy) {
   ClustersSoA clusters3d_soa;
 
   float Esum_allRecHits_inGeV;
-  h_beamenergy->Fill(beamEnergy);
-  h_nrechits->Fill(NRechits);
+  //h_beamenergy->Fill(beamEnergy);
+  //h_nrechits->Fill(NRechits);
   // Create the branches in the output ntuple.
+  clusters_tree.Branch("beamEnergy", &beamEnergy);
+  clusters_tree.Branch("NRechits", &NRechits);
   clusters_tree.Branch("rechits_x", &pcloud.x);
   clusters_tree.Branch("rechits_y", &pcloud.y);
   clusters_tree.Branch("rechits_z", &pcloud.z);
