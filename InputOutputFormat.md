@@ -47,5 +47,6 @@ clus2D_* -> ClustersSoA (vector branch) : list of all 2D clusters info
   std::vector<int> layer;
   std::vector<int> size; ///< Number of hits per cluster
   std::vector<std::vector<int>> hitidxs; ///< List of hits IDs per cluster
+  also rho, delta
   
 clus3D_* -> ClustersSoA (vector branch) : same but 3D clusters

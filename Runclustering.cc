@@ -97,6 +97,7 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("rechits_layer", &pcloud.layer);
   clusters_tree.Branch("rechits_rho", &pcloud.rho);
   clusters_tree.Branch("rechits_delta", &pcloud.delta);
+
   clusters_tree.Branch("clus2D_x", &clusters_soa.x);
   clusters_tree.Branch("clus2D_y", &clusters_soa.y);
   clusters_tree.Branch("clus2D_z", &clusters_soa.z);
@@ -104,6 +105,8 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("clus2D_layer", &clusters_soa.layer);
   clusters_tree.Branch("clus2D_size", &clusters_soa.size);
   clusters_tree.Branch("clus2D_idxs", &clusters_soa.hitidxs);
+  clusters_tree.Branch("clus2D_rho", &pcloud2d.rho);
+  clusters_tree.Branch("clus2D_delta", &pcloud2d.delta);
 
   clusters_tree.Branch("clus3D_x", &clusters3d_soa.x);
   clusters_tree.Branch("clus3D_y", &clusters3d_soa.y);
