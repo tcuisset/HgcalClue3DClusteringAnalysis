@@ -168,7 +168,7 @@ void Runclustering::EventLoop() {
     calculate_distanceToHigher(tiles, pcloud, outlierDeltaFactor, dc);
     // get seeds and followers
     auto total_clusters = findAndAssign_clusters(pcloud, outlierDeltaFactor, dc, rhoc);
-    auto clusters = getClusters(total_clusters, pcloud);
+    std::vector<Cluster> clusters = getClusters(total_clusters, pcloud);
     // Fill in the clusters_SoA
     clusters_soa.load(clusters);
 
