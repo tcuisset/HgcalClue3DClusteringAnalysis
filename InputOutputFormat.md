@@ -14,9 +14,10 @@ branch: ce_clean_energy_MeV   44126381
 
 branch: beamEnergy                 600
 
-branch: impactX_shifted        1634553
-
-branch: impactY_shifted        1672162
+## impact_shifted
+For each event : vector<float> of length 40 (nb of layers)
+branch: impactX_shifted       
+branch: impactY_shifted       
 
 
 
@@ -28,6 +29,10 @@ branch: impactY_shifted        1672162
 # Format of output
 ## 2nd output root file : CLUE_clusters.root
 one TTree name clusters
+beamEnergy : float
+NRechits : uint
+impactX, impactY : vector<float> of length 40 (nb of layers)
+
 rechits_* -> PointsCloud (vector branch) :
   std::vector<float> x;
   std::vector<float> y;

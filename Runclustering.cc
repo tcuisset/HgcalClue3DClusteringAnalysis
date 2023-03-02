@@ -90,6 +90,9 @@ void Runclustering::EventLoop() {
   // Create the branches in the output ntuple.
   clusters_tree.Branch("beamEnergy", &beamEnergy);
   clusters_tree.Branch("NRechits", &NRechits);
+  clusters_tree.Branch("impactX", &impactX_shifted); //These are vector<float> of size 40 (nb of layers)
+  clusters_tree.Branch("impactY", &impactY_shifted);
+
   clusters_tree.Branch("rechits_x", &pcloud.x);
   clusters_tree.Branch("rechits_y", &pcloud.y);
   clusters_tree.Branch("rechits_z", &pcloud.z);
@@ -97,6 +100,7 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("rechits_layer", &pcloud.layer);
   clusters_tree.Branch("rechits_rho", &pcloud.rho);
   clusters_tree.Branch("rechits_delta", &pcloud.delta);
+  clusters_tree.Branch("rechits_isSeed", &pcloud.isSeed);
 
   clusters_tree.Branch("clus2D_x", &clusters_soa.x);
   clusters_tree.Branch("clus2D_y", &clusters_soa.y);
@@ -107,6 +111,7 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("clus2D_idxs", &clusters_soa.hitidxs);
   clusters_tree.Branch("clus2D_rho", &pcloud2d.rho);
   clusters_tree.Branch("clus2D_delta", &pcloud2d.delta);
+  clusters_tree.Branch("clus2D_isSeed", &pcloud2d.isSeed);
 
   clusters_tree.Branch("clus3D_x", &clusters3d_soa.x);
   clusters_tree.Branch("clus3D_y", &clusters3d_soa.y);
