@@ -1,2 +1,2 @@
 make
-./runclustering files.txt outFileName.root sim alpha 50
+./runclustering files.txt outFileName.root
