@@ -1,0 +1,12 @@
+runList = ../files-single.txt
+datatype = data
+tag = v2
+outputFileDirectory = /grid_mnt/data_cms_upgrade/cuisset/testbeam18/clue3d/$(tag)/
+
+outputFileName = $(outputFileDirectory)/$(ClueParamFolder)/CLUE_clusters_$(datatype).root
+
+include : runclustering_single.submit_file
+
+queue ClueParamFolder, clue3DParams from (
+    default, 1.3 0.042 2.0 2
+)

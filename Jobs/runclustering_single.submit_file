@@ -1,0 +1,21 @@
+universe = vanilla
+
+executable = runclustering_job.sh
+arguments = $BASENAME(runList) $(outputFileName) $(clue3DParams)
+
+environment = "ANALYSIS_DIR=$Ffp(runList)"
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = ../runclustering, $(runList)
+
+output = out/runclustering-$(tag)-$(ClueParamFolder)-$(datatype).out
+error =  out/runclustering-$(tag)-$(ClueParamFolder)-$(datatype).err
+log =    log/runclustering-$(tag)-$(ClueParamFolder)-$(datatype).log
+
+request_cpus   = 1
+request_memory = 1GB
+T3Queue = short
+WNTag = el7
+include : /opt/exp_soft/cms/t3/t3queue |
+
