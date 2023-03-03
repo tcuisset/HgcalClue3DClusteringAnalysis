@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include <cstring>
+#include <string>
 #include <iostream>
 #include <vector>
 
@@ -36,16 +37,42 @@ void dumpSoA(const PointsCloud & points) {
 
 int main(int argc, char *argv[]) 
 {
-  if (argc < 2) {
-    cerr << "Please give 2 arguments "
+  if (argc < 4) {
+    cerr << "Please give at least 2 arguments : " 
          << "runList "
          << " "
-         << "outputFileName" << endl;
+         << "outputFileName" << endl
+         << "and optionally 3 additional parameters for CLUE3D : "
+         << "dc rhic outlierDeltaFactor" << endl
+         << "(for now only em section params + parameters for CLUE2D are kept as default)";
     return -1;
   }
   const char *inputFileList = argv[1]; //List of input files produced by TestBeamReconstruction
   const char *outFileName = argv[2];
-  Runclustering tbCLUS(inputFileList, outFileName);
+
+  constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
+
+  ClueAlgoParameters clueParameters;
+  clueParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
+  clueParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+  clueParameters.outlierDeltaFactor = 2.f;
+
+  Clue3DAlgoParameters clue3DParameters;
+  if (argc >= 6) {
+    clue3DParameters.dc = {std::stof(argv[3]), -1.};
+    clue3DParameters.rhoc = {std::stof(argv[4]), -1.};
+    clue3DParameters.outlierDeltaFactor = std::stof(argv[5]);
+    clue3DParameters.densitySiblingLayers = std::stoi(argv[6]);
+    cout << "Using custom CLUE3D parameters : " << clue3DParameters << endl;
+  } else {
+    clue3DParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
+    clue3DParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+    clue3DParameters.outlierDeltaFactor = 2.f;
+    clue3DParameters.densitySiblingLayers = 2;
+    cout << "Using default CLUE3D parameters : " << clue3DParameters << endl;
+  }
+  
+  Runclustering tbCLUS(inputFileList, outFileName, clueParameters, clue3DParameters);
   tbCLUS.EventLoop();
   return 0;
 }
@@ -152,11 +179,6 @@ void Runclustering::EventLoop() {
     // Compute clusters using CLUE
     //NLAYERS defined in LayersTilesConstants
     std::array<LayerTiles, NLAYERS> tiles; ///< Array of LayerTiles (2D layer of tiles) for each layer
-    //    constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
-    constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
-    constexpr float dc[2] = {1.3f, 3.f * sqrt(2.f) + 0.1};
-    constexpr float rhoc[2] = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
-    constexpr float outlierDeltaFactor = 2.f;
     //make pointcloud
     pcloud.x = *ce_clean_x;
     pcloud.y = *ce_clean_y;
@@ -168,17 +190,16 @@ void Runclustering::EventLoop() {
     // Fill "TILES"
     compute_histogram(tiles, pcloud);
     // Calculate density quantities for points
-    calculate_density(tiles, pcloud, dc);
+    calculate_density(tiles, pcloud, clueParams_.dc);
     // Calculate nearest higher density  point
-    calculate_distanceToHigher(tiles, pcloud, outlierDeltaFactor, dc);
+    calculate_distanceToHigher(tiles, pcloud, clueParams_.outlierDeltaFactor, clueParams_.dc);
     // get seeds and followers
-    auto total_clusters = findAndAssign_clusters(pcloud, outlierDeltaFactor, dc, rhoc);
+    auto total_clusters = findAndAssign_clusters(pcloud, clueParams_.outlierDeltaFactor, clueParams_.dc, clueParams_.rhoc);
     std::vector<Cluster> clusters = getClusters(total_clusters, pcloud);
     // Fill in the clusters_SoA
     clusters_soa.load(clusters);
 
     // Compute clusters using CLUE3D [similar sequence as the 2D part, starting pointcloud here composed of the 2D clusters just made above]
-    constexpr int densitySiblingLayers = 2; ///< define range of layers +- layer# of a point  
     std::array<LayerTiles, NLAYERS> tiles2d;
     pcloud2d.x = clusters_soa.x ;
     pcloud2d.y = clusters_soa.y ;
@@ -194,9 +215,9 @@ void Runclustering::EventLoop() {
 
 
 
-    calculate_density3d(tiles2d, pcloud2d, dc, densitySiblingLayers);
-    calculate_distanceToHigher3d(tiles2d, pcloud2d, outlierDeltaFactor, dc, densitySiblingLayers);
-    auto total_clusters3d = findAndAssign_clusters3d(pcloud2d, outlierDeltaFactor, dc, rhoc);
+    calculate_density3d(tiles2d, pcloud2d, clue3DParams_.dc, clue3DParams_.densitySiblingLayers);
+    calculate_distanceToHigher3d(tiles2d, pcloud2d, clue3DParams_.outlierDeltaFactor, clue3DParams_.dc, clue3DParams_.densitySiblingLayers);
+    auto total_clusters3d = findAndAssign_clusters3d(pcloud2d, clue3DParams_.outlierDeltaFactor, clue3DParams_.dc, clue3DParams_.rhoc);
     auto clusters3d = getClusters3d(total_clusters3d, pcloud2d);
     clusters3d_soa.load(clusters3d);
     

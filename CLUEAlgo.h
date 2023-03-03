@@ -2,10 +2,28 @@
 #define CLUEAlgo_h
 
 #include <cmath>
+#include <ostream>
+#include <array>
 
 #include "LayerTiles.h"
 #include "PointsCloud.h"
 #include "Cluster.h"
+
+
+struct ClueAlgoParameters
+{
+    std::array<float, 2> dc;
+    std::array<float, 2> rhoc;
+    float outlierDeltaFactor;
+
+    friend std::ostream& operator<< (std::ostream& stream, const ClueAlgoParameters& p) {
+        stream << "dc = " << p.dc[0] 
+               << ", rhoc = " << p.rhoc[0]
+               << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
+               << std::endl;
+        return stream;
+    }
+};
 
 ///< 2-d distance on the layer
 inline float distance(PointsCloud &points, int i, int j) {
@@ -62,7 +80,7 @@ void compute_histogram(std::array<LayerTiles, NLAYERS> &d_hist,
  * \param dc distance parameters (array as depends on layer)
 */
 void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
-                       PointsCloud &points, const float dc[]) {
+                       PointsCloud &points, std::array<float, 2> dc) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
     LayerTiles &lt = d_hist[points.layer[i]];
@@ -104,7 +122,7 @@ void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
 */
 void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
                                 PointsCloud &points, float outlierDeltaFactor,
-                                const float dc[]) {
+                                std::array<float, 2> dc) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
     float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
@@ -163,8 +181,8 @@ void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
  * \return number of clusters created
 */
 int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
-                           const float dc[],
-                           const float rhoc[]) {
+                           std::array<float, 2> dc,
+                           std::array<float, 2> rhoc) {
   int nClusters = 0;
 
   // find cluster seeds and outlier

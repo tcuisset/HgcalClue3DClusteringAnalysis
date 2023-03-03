@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <array>
 
 
 #include "TBNtupleAnalyzer.h"
@@ -18,6 +19,8 @@
 #include "TLorentzVector.h"
 #include "TProfile.h"
 
+#include "CLUEAlgo.h"
+#include "CLUE3DAlgo.h"
 
 class Runclustering : public TBNtupleAnalyzer {
  public:
@@ -25,8 +28,9 @@ class Runclustering : public TBNtupleAnalyzer {
    * \param inputFileList path to a file listing all paths to the input root files
    * \param energy not used (set in EventLoop)
   */
-  Runclustering(const TString &inputFileList = "foo.txt",
-                  const char *outFileName = "histo.root"
+  Runclustering(const TString &inputFileList,
+                  const char *outFileName,
+                  ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams
                  ); 
                                               
   ~Runclustering();
@@ -41,7 +45,8 @@ class Runclustering : public TBNtupleAnalyzer {
   TFile* output_file_;
   TH1F *h_beamenergy;
   TH1F *h_nrechits;
-
+  ClueAlgoParameters clueParams_;
+  Clue3DAlgoParameters clue3DParams_;
 
 };
 #endif
@@ -51,8 +56,10 @@ class Runclustering : public TBNtupleAnalyzer {
 
 
 Runclustering::Runclustering(
-    const TString &inputFileList, const char *outFileName) { 
-
+    const TString &inputFileList, const char *outFileName,
+    ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams) 
+    : clueParams_(clueParams_), clue3DParams_(clue3DParams) { 
+  
   TChain *tree = new TChain("relevant_branches");
   if (!FillChain(tree, inputFileList)) {
     std::cerr << "Cannot get the tree " << std::endl;

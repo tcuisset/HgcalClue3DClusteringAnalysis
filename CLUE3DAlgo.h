@@ -9,6 +9,23 @@
 
 #define NLAYER1 1 ///< Index of first layer
 
+struct Clue3DAlgoParameters
+{
+    std::array<float, 2> dc;
+    std::array<float, 2> rhoc;
+    float outlierDeltaFactor;
+    int densitySiblingLayers; ///< define range of layers +- layer# of a point  
+
+    friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
+        stream << "dc = " << p.dc[0] 
+               << ", rhoc = " << p.rhoc[0]
+               << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
+               << ", densitySiblingLayers = " << p.densitySiblingLayers
+               << std::endl;
+        return stream;
+    }
+};
+
 /**
  * Compute the distance between 2 points in PointsCloud in *2D* using (x;y) coordinates only (ignoring z completely)
  * *TODO* give a better name to this function
@@ -26,7 +43,7 @@ inline float distance3d(PointsCloud &points, int i, int j) {
  * \param densitySiblingLayers How many layers to consider before and beyond each cluster to compute rho
 */
 void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
-			 PointsCloud &points, const float dc[], int densitySiblingLayers) {
+			 PointsCloud &points, std::array<float, 2> dc, int densitySiblingLayers) {
   // loop over all 2D clusters
   for (unsigned int i = 0; i < points.n; i++) {
     int clayer = points.layer[i]; ///< Layer of 2D cluster
@@ -83,7 +100,7 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
 */
 void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
                                 PointsCloud &points, float outlierDeltaFactor,
-				  const float dc[], int densitySiblingLayers) {
+				  std::array<float, 2> dc, int densitySiblingLayers) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
     float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
@@ -153,8 +170,8 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
  * \return number of 3D clusters created
 */
 int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
-                           const float dc[],
-                           const float rhoc[]) {
+                           std::array<float, 2> dc,
+                           std::array<float, 2> rhoc) {
   int nClusters = 0;
 
   // find cluster seeds and outlier
