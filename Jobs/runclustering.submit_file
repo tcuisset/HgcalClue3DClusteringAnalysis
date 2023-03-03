@@ -1,9 +1,9 @@
-runList = ../files-single.txt
-datatype = data
-tag = v2
+#runList = ../files-single.txt
+#datatype = data
+#tag = v2
 outputFileDirectory = /grid_mnt/data_cms_upgrade/cuisset/testbeam18/clue3d/$(tag)/
 
-outputFileName = $(outputFileDirectory)/$(ClueParamFolder)/CLUE_clusters_$(datatype).root
+outputFileName = $(outputFileDirectory)/$(ClueParamFolder)/$(datatype)/CLUE_clusters.root
 
 include : runclustering_single.submit_file
 

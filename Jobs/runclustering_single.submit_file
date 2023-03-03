@@ -14,8 +14,8 @@ error =  out/runclustering-$(tag)-$(ClueParamFolder)-$(datatype).err
 log =    log/runclustering-$(tag)-$(ClueParamFolder)-$(datatype).log
 
 request_cpus   = 1
-request_memory = 1GB
-T3Queue = short
+request_memory = 600MB
+T3Queue = long
 WNTag = el7
 include : /opt/exp_soft/cms/t3/t3queue |
 
