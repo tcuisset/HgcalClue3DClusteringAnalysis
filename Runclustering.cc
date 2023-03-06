@@ -116,6 +116,7 @@ void Runclustering::EventLoop() {
   //h_nrechits->Fill(NRechits);
   // Create the branches in the output ntuple.
   clusters_tree.Branch("beamEnergy", &beamEnergy);
+  clusters_tree.Branch("ntupleNumber", &currentNtupleNumber);
   clusters_tree.Branch("NRechits", &NRechits);
   clusters_tree.Branch("impactX", &impactX_shifted); //These are vector<float> of size 40 (nb of layers)
   clusters_tree.Branch("impactY", &impactY_shifted);

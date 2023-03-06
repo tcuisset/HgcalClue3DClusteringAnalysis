@@ -18,6 +18,8 @@
 #include "TH3F.h"
 #include "TLorentzVector.h"
 #include "TProfile.h"
+#include "TPRegexp.h"
+#include "TObjString.h"
 
 #include "CLUEAlgo.h"
 #include "CLUE3DAlgo.h"
@@ -48,6 +50,7 @@ class Runclustering : public TBNtupleAnalyzer {
   ClueAlgoParameters clueParams_;
   Clue3DAlgoParameters clue3DParams_;
 
+  UShort_t currentNtupleNumber; ///< The ntuple nb currently loaded by the chain, inferred from the filename (-1 if could not infer)
 };
 #endif
 
@@ -58,7 +61,7 @@ class Runclustering : public TBNtupleAnalyzer {
 Runclustering::Runclustering(
     const TString &inputFileList, const char *outFileName,
     ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams) 
-    : clueParams_(clueParams_), clue3DParams_(clue3DParams) { 
+    : clueParams_(clueParams_), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
   
   TChain *tree = new TChain("relevant_branches");
   if (!FillChain(tree, inputFileList)) {
@@ -111,9 +114,22 @@ Long64_t Runclustering::LoadTree(Long64_t entry) {
   if (centry < 0) return centry;
   if (!fChain->InheritsFrom(TChain::Class())) return centry;
   TChain *chain = (TChain *)fChain;
+
+  //Match at end of string underscore + numbers + .root 
+  TPRegexp regexp_match_ntuple_nb("_([0-9]+)\\.root$");
   if (chain->GetTreeNumber() != fCurrent) {
     fCurrent = chain->GetTreeNumber();
     //    Notify();
+    TString filename = fChain->GetCurrentFile()->GetName();
+
+    //Get the ntuple number from file
+    TObjArray *subStrL = regexp_match_ntuple_nb.MatchS(filename);
+    if (subStrL->GetEntries() >= 1) {
+      currentNtupleNumber = ((TObjString*) subStrL->Last())->GetString().Atoi();
+    } else {
+      currentNtupleNumber = -1;
+    }
+    delete subStrL;
   }
 
 
