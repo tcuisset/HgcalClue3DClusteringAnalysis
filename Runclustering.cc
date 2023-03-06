@@ -37,7 +37,7 @@ void dumpSoA(const PointsCloud & points) {
 
 int main(int argc, char *argv[]) 
 {
-  if (argc < 4) {
+  if (argc < 3) {
     cerr << "Please give at least 2 arguments : " 
          << "runList "
          << " "
