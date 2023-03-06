@@ -8,6 +8,8 @@ import awkward as ak
 import hist
 import pandas as pd
 
+from dataframe import DataframeComputations
+
 
 parser = argparse.ArgumentParser(description="Fill histograms from CLUE_clusters.root files for plotting. Writes pickled boost-histograms")
 parser.add_argument("--input", dest="input_file", default='ClusteringAnalysis/CLUE_clusters_single.root',
@@ -71,44 +73,25 @@ hist_dict["clue3d_total_clustered_energy"] = hist.Hist(beamEnergiesAxis, layerAx
 #Same but only consider for each event the 3D cluster with the highest energy
 hist_dict["clue3d_total_clustered_energy_by_largest_cluster"] = hist.Hist(beamEnergiesAxis, layerAxis, cluster2dEnergy_axis)
 
+
 try:
     for (array, report) in uproot.iterate(args.input_file + ":clusters", step_size="100MB", library="ak", report=True):
         print("Processing events [" + str(report.start) + ", " + str(report.stop) + "[")
 
-        impact = ak.to_dataframe(array[
-            ["impactX", "impactY"]],
-            levelname=lambda i : {0 : "event", 1:"layer"}[i])
+        comp = DataframeComputations(array)
 
-        rechits = ak.to_dataframe(array[
-            ["beamEnergy", "NRechits", "rechits_x", "rechits_y", "rechits_z", "rechits_energy", "rechits_layer",
-            "rechits_rho", "rechits_delta", "rechits_isSeed"]], 
-            levelname=lambda i : {0 : "event", 1:"rechit_id"}[i])
+        hist_dict["rechits_position"].fill(comp.rechits.beamEnergy, comp.rechits.rechits_layer, comp.rechits.rechits_energy, comp.rechits.rechits_x, comp.rechits.rechits_y)
+        hist_dict["rechits_prop"].fill(comp.rechits.beamEnergy, comp.rechits.rechits_layer, comp.rechits.rechits_isSeed, comp.rechits.rechits_rho, comp.rechits.rechits_delta)
 
-        hist_dict["rechits_position"].fill(rechits.beamEnergy, rechits.rechits_layer, rechits.rechits_energy, rechits.rechits_x, rechits.rechits_y)
-        hist_dict["rechits_prop"].fill(rechits.beamEnergy, rechits.rechits_layer, rechits.rechits_isSeed, rechits.rechits_rho, rechits.rechits_delta)
-
-        event_group = rechits.groupby(level=0) # group by event number (first level)
+        event_group = comp.rechits.groupby(level=0) # group by event number (first level)
         hist_dict["event_prop"].fill(
             event_group.beamEnergy.first(), #beam energy is the same for all rows of an event, so take the first hit
             event_group.rechits_energy.sum()) #Sum rechits_energy for all rechits of an event
-
-
-        clusters_2d = ak.to_dataframe(array[
-            ["beamEnergy", "NRechits", "clus2D_x", "clus2D_y", "clus2D_z", "clus2D_energy", "clus2D_layer",
-            "clus2D_rho", "clus2D_delta", "clus2D_idxs", "clus2D_isSeed"]
-            ], 
-            levelname=lambda i : {0 : "event", 1:"clus2D_id", 2:"hit_id"}[i])
         
-        clusters2D_slice = clusters_2d.loc[(slice(None), slice(None), 0)].reset_index(drop=True) #Slice to get row of first hit (we do not care about the hits)
-        hist_dict["clusters2d_prop"].fill(clusters2D_slice.beamEnergy, clusters2D_slice.clus2D_layer, clusters2D_slice.clus2D_isSeed, clusters2D_slice.clus2D_rho, clusters2D_slice.clus2D_delta)
-
-
-        clusters_3d = ak.to_dataframe(array[
-            ["beamEnergy", "NRechits", "clus3D_x", "clus3D_y", "clus3D_z", "clus3D_energy", "clus3D_size", "clus3D_idxs"]
-            ], 
-            levelname=lambda i : {0 : "event", 1:"clus3D_id", 2:"hit_id"}[i])
+        #Slice to get row of first hit (we do not care about the hits)
+        hist_dict["clusters2d_prop"].fill(comp.clusters2d_slice.beamEnergy, comp.clusters2d_slice.clus2D_layer, comp.clusters2d_slice.clus2D_isSeed, comp.clusters2d_slice.clus2D_rho, comp.clusters2d_slice.clus2D_delta)
         
-        clusters3D_slice = clusters_3d.loc[(slice(None), slice(None), 0)].reset_index(drop=True) #Slice to get row of first 2D cluster (we do not care about the hits)
+        clusters3D_slice = comp.clusters_3d.loc[(slice(None), slice(None), 0)].reset_index(drop=True) #Slice to get row of first 2D cluster (we do not care about the hits)
         hist_dict["clusters3d_prop"].fill(clusters3D_slice.beamEnergy, clusters3D_slice.clus3D_energy, clusters3D_slice.clus3D_size)
         hist_dict["clusters3d_position_xy"].fill(clusters3D_slice.beamEnergy, clusters3D_slice.clus3D_energy, clusters3D_slice.clus3D_x, clusters3D_slice.clus3D_y)
         hist_dict["clusters3d_position_z"].fill(clusters3D_slice.beamEnergy, clusters3D_slice.clus3D_energy, clusters3D_slice.clus3D_z)
@@ -117,13 +100,13 @@ try:
         clusters_3d_2d = pd.merge(
             #Left : clusters3d
             # Reset multiindex so its columns can be kept in joined dataframe (otherwise clus3D_id column disappears)
-            clusters_3d.reset_index(level=("clus3D_id", "hit_id"), names=["event", "clus3D_id", "clus3D_hit_id"]),
+            comp.clusters_3d.reset_index(level=("clus3D_id", "hit_id"), names=["event", "clus3D_id", "clus3D_hit_id"]),
 
             #Right : clusters_2d
             # We don't care about rechits so we slice the df by taking the row of first rechit of 2D cluster
             #                  event     cluster2d_id  index of hit inside cluster2D
             # Also reset index for same reason
-            clusters_2d.loc[(slice(None), slice(None),   0                       )].reset_index(level="event"),
+            comp.clusters_2d.loc[(slice(None), slice(None),   0                       )].reset_index(level="event"),
             how='inner',
 
             # Map event on both sides
@@ -140,7 +123,7 @@ try:
             clusters_3d_2d,
 
             #Right : impact df (indexed by event and layer)
-            impact, 
+            comp.impact, 
 
             # Map event on both sides
             # Map layer of 2D cluster with layer of impact computation
@@ -150,7 +133,7 @@ try:
 
         #### Make an index that gets us the highest energy 3D cluster per event
         # Slice clusters3d to remove 2D cluster rows (just take the first row)
-        clusters3d_slice = clusters_3d.loc[(slice(None), slice(None), 0)]
+        clusters3d_slice = comp.clusters_3d.loc[(slice(None), slice(None), 0)]
         # Build an index that selects for each event the 3D cluster with highest energy
         index_largest_3D_cluster = clusters3d_slice.groupby(["event"])['clus3D_energy'].transform(max) == clusters3d_slice["clus3D_energy"]
 
