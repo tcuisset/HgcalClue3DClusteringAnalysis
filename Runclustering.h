@@ -61,7 +61,7 @@ class Runclustering : public TBNtupleAnalyzer {
 Runclustering::Runclustering(
     const TString &inputFileList, const char *outFileName,
     ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams) 
-    : clueParams_(clueParams_), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
+    : clueParams_(clueParams), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
   
   TChain *tree = new TChain("relevant_branches");
   if (!FillChain(tree, inputFileList)) {
