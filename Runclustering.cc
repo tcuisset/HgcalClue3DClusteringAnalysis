@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
   clueParameters.outlierDeltaFactor = 2.f;
 
   Clue3DAlgoParameters clue3DParameters;
-  if (argc >= 6) {
+  if (argc >= 7) {
     clue3DParameters.dc = {std::stof(argv[3]), -1.};
     clue3DParameters.rhoc = {std::stof(argv[4]), -1.};
     clue3DParameters.outlierDeltaFactor = std::stof(argv[5]);
