@@ -1,7 +1,6 @@
 CXX     = g++
-OPT_FLAGS = -O3
 
-CXXFLAGS= $(OPT_FLAGS) $(shell root-config --cflags)
+CXXFLAGS= $(shell root-config --cflags) -Wall -Wextra -g
 LIBS    = $(shell root-config --libs) 
 
 SOURCES = TBNtupleAnalyzer.cc Runclustering.cc 
@@ -19,8 +18,8 @@ all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	@echo "Linking $(PROGRAM) ..."
-	@echo "@$(CXX) $(OPT_FLAGS) $(LIBS) $(OBJECTS) -g -o $@"
-	@$(CXX) $(OPT_FLAGS) -o $@ $^ $(LIBS)
+	@echo "@$(CXX) $(LIBS) $(OBJECTS) -g -o $@"
+	@$(CXX) -o $@ $^ $(LIBS)
 	@echo "done"
 
 
