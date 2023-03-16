@@ -201,6 +201,8 @@ int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
     } else if (!isOutlier) {
       // register as follower at its nearest higher
       points.followers[points.nearestHigher[i]].push_back(i);
+    } else {
+      points.isOutlier[i] = 1;
     }
   }
 

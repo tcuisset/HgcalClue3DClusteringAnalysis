@@ -20,6 +20,7 @@ struct PointsCloud {
     clusterIndex.resize(nPoints, -1);
     followers.resize(nPoints);
     isSeed.resize(nPoints, 0);
+    isOutlier.resize(nPoints, 0);
     n = nPoints;
   }
 
@@ -34,6 +35,7 @@ struct PointsCloud {
     nearestHigher.clear();
     followers.clear();
     isSeed.clear();
+    isOutlier.clear();
     clusterIndex.clear();
   }
 
@@ -49,7 +51,8 @@ struct PointsCloud {
   std::vector<float> delta; ///< Distance to nearest highest
   std::vector<int> nearestHigher; ///< ID of nearest highest
   std::vector<std::vector<int>> followers; ///< List of points that follow this point (ie points which are neither seeds nor outliers and for which we are the nearest higher)
-  std::vector<int> isSeed; ///< Is the point a seed
+  std::vector<int> isSeed; ///< Is the point a seed (0=false, 1=true)
+  std::vector<int> isOutlier; ///< Is the point an outlier (0=false, 1=true)
   std::vector<int> clusterIndex; ///< ID of the cluster this point is member of
 
   unsigned int n; ///< Size of output variables vectors, usually same as input

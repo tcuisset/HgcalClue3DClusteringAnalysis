@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <stdexcept>
 
 
 #include "TBNtupleAnalyzer.h"
@@ -20,6 +21,7 @@
 #include "TProfile.h"
 #include "TPRegexp.h"
 #include "TObjString.h"
+#include "TSystem.h"
 
 #include "CLUEAlgo.h"
 #include "CLUE3DAlgo.h"
@@ -73,7 +75,10 @@ Runclustering::Runclustering(
 
   TBNtupleAnalyzer::Init(tree); //Init branch pointers for reading TTree 
 
+  gSystem->Exec(TString("mkdir -p $(dirname \"") + outFileName +  "\")"); //Create directories as needed
   output_file_ = new TFile(outFileName, "RECREATE");
+  if (output_file_->IsZombie())
+    throw std::runtime_error("Could not open output file");
   //BookHistogram(outFileName, config, energy);
 }
 
