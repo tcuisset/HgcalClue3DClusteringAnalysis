@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
          << "runList "
          << " "
          << "outputFileName" << endl
-         << "and optionally 3 additional parameters for CLUE3D : "
-         << "dc rhic outlierDeltaFactor" << endl
+         << "and optionally 4 additional parameters for CLUE3D : "
+         << "dc rhic outlierDeltaFactor densitySiblingLayers" << endl
          << "(for now only em section params + parameters for CLUE2D are kept as default)";
     return -1;
   }
