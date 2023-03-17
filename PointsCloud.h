@@ -5,11 +5,18 @@
 #include "Cluster.h"
 
 
+
 /**
  * List of points, holding for each point its position, layer nb, etc 
  * as well as output of CLUE algorithm for each point (rho, delta, nearest higher, ...)
 */
 struct PointsCloud {
+  enum PointType : char {
+    FOLLOWER = 0,
+    SEED = 1,
+    OUTLIER = 2
+  };
+
   PointsCloud() = default;
 
   ///< 
@@ -19,8 +26,7 @@ struct PointsCloud {
     nearestHigher.resize(nPoints, -1);
     clusterIndex.resize(nPoints, -1);
     followers.resize(nPoints);
-    isSeed.resize(nPoints, 0);
-    isOutlier.resize(nPoints, 0);
+    pointType.resize(nPoints, PointsCloud::FOLLOWER);
     n = nPoints;
   }
 
@@ -34,8 +40,7 @@ struct PointsCloud {
     delta.clear();
     nearestHigher.clear();
     followers.clear();
-    isSeed.clear();
-    isOutlier.clear();
+    pointType.clear();
     clusterIndex.clear();
   }
 
@@ -51,8 +56,7 @@ struct PointsCloud {
   std::vector<float> delta; ///< Distance to nearest highest
   std::vector<int> nearestHigher; ///< ID of nearest highest
   std::vector<std::vector<int>> followers; ///< List of points that follow this point (ie points which are neither seeds nor outliers and for which we are the nearest higher)
-  std::vector<int> isSeed; ///< Is the point a seed (0=false, 1=true)
-  std::vector<int> isOutlier; ///< Is the point an outlier (0=false, 1=true)
+  std::vector<char> pointType; ///< Is the point a follower, a seed or an outlier (use enum PointType for values)
   std::vector<int> clusterIndex; ///< ID of the cluster this point is member of
 
   unsigned int n; ///< Size of output variables vectors, usually same as input

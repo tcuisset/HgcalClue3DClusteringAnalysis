@@ -204,7 +204,7 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
     bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       // set isSeed as 1
-      points.isSeed[i] = 1;
+      points.pointType[i] = PointsCloud::SEED;
       // set cluster id
       points.clusterIndex[i] = nClusters;
       // increment number of clusters
@@ -214,8 +214,9 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
     } else if (!isOutlier) {
       // register as follower at its nearest higher
       points.followers[points.nearestHigher[i]].push_back(i);
+      points.pointType[i] = PointsCloud::FOLLOWER;
     } else {
-      points.isOutlier[i] = 1;
+      points.pointType[i] = PointsCloud::OUTLIER;
     }
   }
 
