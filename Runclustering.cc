@@ -13,6 +13,10 @@
 #include "CLUE3DAlgo.h"
 #include "Math/SMatrix.h"
 #include "Math/SVector.h"
+
+#include "OptionParser.h"
+
+namespace option = ROOT::option;
 using namespace std;
 
 
@@ -35,44 +39,154 @@ void dumpSoA(const PointsCloud & points) {
   }
 }
 
+struct Arg: public option::Arg
+{
+  static void printError(const char* msg1, const option::Option& opt, const char* msg2)
+  {
+    fprintf(stderr, "ERROR: %s", msg1);
+    fwrite(opt.name, opt.namelen, 1, stderr);
+    fprintf(stderr, "%s", msg2);
+  }
+/*  
+  static option::ArgStatus Unknown(const option::Option& option, bool msg)
+  {
+    if (msg) printError("Unknown option '", option, "'\n");
+    return option::ARG_ILLEGAL;
+  }
+ 
+  static option::ArgStatus Required(const option::Option& option, bool msg)
+  {
+    if (option.arg != 0)
+      return option::ARG_OK;
+ 
+    if (msg) printError("Option '", option, "' requires an argument\n");
+    return option::ARG_ILLEGAL;
+  }*/
+ 
+  static option::ArgStatus NonEmpty(const option::Option& option, bool msg)
+  {
+    if (option.arg != 0 && option.arg[0] != 0)
+      return option::ARG_OK;
+ 
+    if (msg) printError("Option '", option, "' requires a non-empty argument\n");
+    return option::ARG_ILLEGAL;
+  } 
+ 
+  static option::ArgStatus Numeric(const option::Option& option, bool msg)
+  {
+    char* endptr = 0;
+    if (option.arg != 0 && strtol(option.arg, &endptr, 10)){};
+    if (endptr != option.arg && *endptr == 0)
+      return option::ARG_OK;
+ 
+    if (msg) printError("Option '", option, "' requires a numeric argument\n");
+    return option::ARG_ILLEGAL;
+  }
+
+  static option::ArgStatus RequiredFloat(const option::Option& option, bool msg)
+  {
+    if (option.arg != 0){
+      char* endptr = 0;
+      std::strtof(option.arg, &endptr);
+      if (endptr != option.arg) {
+        //String to float conversion was successful
+        return option::ARG_OK;
+      }
+    }
+    if (msg) printError("Option '", option, "' requires a floating point argument\n");
+    return option::ARG_ILLEGAL;
+  }
+};
+
+
+enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST,
+  CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR,
+  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS};
+const option::Descriptor usage[] =
+{// index type shortopt longopt check_arg help
+ {UNKNOWN, 0,"" , ""    ,option::Arg::None, "USAGE: runclustering [options]\n\n"
+                                            "Options:" },
+ {HELP,    0,"" , "help",option::Arg::None, "  --help  \tPrint usage and exit." },
+ {OUTPUT_FILE, 0,"o", "output-file",Arg::NonEmpty, "-o, --output-file=  \tLocation of output file" },
+ {INPUT_FILE_LIST, 0, "f", "input-file-list", Arg::NonEmpty, "-f, --input-file-list= \t Path to a file holding the paths of all the input files to read"},
+ {CLUE_DC, 0, "", "clue-dc", Arg::RequiredFloat, "--clue-dc= \t CLUE2D critical distance parameter"},
+ {CLUE_RHOC, 0, "", "clue-rhoc", Arg::RequiredFloat, "--clue-rhoc= \t CLUE2D critical density parameter"},
+ {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
+ {CLUE3D_DC, 0, "", "clue3d-dc", Arg::RequiredFloat, "--clue3d-dc= \t CLUE3D critical distance parameter"},
+ {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
+ {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
+ {CLUE3D_DENSITY_SIBLING_LAYERS, 0, "", "clue3d-density-sibling-layers", Arg::Numeric, "--clue3d-density-sibling-layers= \t CLUE3D density sibling layers parameters, define range of layers +- layer# to look for another 2D cluster"},
+ {UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExamples:\n"
+                                            "  ./runclustering -f files-single.txt -o ./CLUE_clusters.root\n"
+                                            "  ./runclustering --clue-rhoc=2. -f files-single.txt -o ./CLUE_clusters.root\n" },
+ {0,0,0,0,0,0}
+};
+
+
 int main(int argc, char *argv[]) 
 {
-  if (argc < 3) {
-    cerr << "Please give at least 2 arguments : " 
-         << "runList "
-         << " "
-         << "outputFileName" << endl
-         << "and optionally 4 additional parameters for CLUE3D : "
-         << "dc rhic outlierDeltaFactor densitySiblingLayers" << endl
-         << "(for now only em section params + parameters for CLUE2D are kept as default)";
-    return -1;
+  argc-=(argc>0); argv+=(argc>0); // skip program name argv[0] if present
+  option::Stats  stats(usage, argc, argv);
+  std::vector<option::Option> options(stats.options_max);
+  std::vector<option::Option> buffer(stats.buffer_max);
+  option::Parser parse(usage, argc, argv, &options[0], &buffer[0]);
+ 
+  if (parse.error())
+    return 1;
+  
+  if (options[HELP] || argc == 0 || options[UNKNOWN]) {
+    option::printUsage(std::cout, usage);
+    return 0;
   }
-  const char *inputFileList = argv[1]; //List of input files produced by TestBeamReconstruction
-  const char *outFileName = argv[2];
-
-  constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
 
   ClueAlgoParameters clueParameters;
-  clueParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
-  clueParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
-  clueParameters.outlierDeltaFactor = 2.f;
+  if (options[CLUE_DC])
+    clueParameters.dc = {std::stof(options[CLUE_DC].arg), -1.};
+  else
+    clueParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
+  
+  constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
+  if (options[CLUE_RHOC])
+    clueParameters.rhoc = {std::stof(options[CLUE_RHOC].arg), -1.};
+  else
+    clueParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+  
+  if (options[CLUE_OUTLIER_DELTA_FACTOR])
+    clueParameters.outlierDeltaFactor = std::stof(options[CLUE_OUTLIER_DELTA_FACTOR].arg);
+  else
+    clueParameters.outlierDeltaFactor = 2.f;
+  
+  cout << "Using CLUE parameters : " << clueParameters << endl;
 
   Clue3DAlgoParameters clue3DParameters;
-  if (argc >= 7) {
-    clue3DParameters.dc = {std::stof(argv[3]), -1.};
-    clue3DParameters.rhoc = {std::stof(argv[4]), -1.};
-    clue3DParameters.outlierDeltaFactor = std::stof(argv[5]);
-    clue3DParameters.densitySiblingLayers = std::stoi(argv[6]);
-    cout << "Using custom CLUE3D parameters : " << clue3DParameters << endl;
-  } else {
+  if (options[CLUE3D_DC])
+    clue3DParameters.dc = {std::stof(options[CLUE3D_DC].arg), -1.};
+  else
     clue3DParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
-    clue3DParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
-    clue3DParameters.outlierDeltaFactor = 2.f;
-    clue3DParameters.densitySiblingLayers = 2;
-    cout << "Using default CLUE3D parameters : " << clue3DParameters << endl;
-  }
   
-  Runclustering tbCLUS(inputFileList, outFileName, clueParameters, clue3DParameters);
+  if (options[CLUE3D_RHOC])
+    clue3DParameters.rhoc = {std::stof(options[CLUE3D_RHOC].arg), -1.};
+  else
+    clue3DParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+  
+  if (options[CLUE3D_OUTLIER_DELTA_FACTOR])
+    clue3DParameters.outlierDeltaFactor = std::stof(options[CLUE3D_OUTLIER_DELTA_FACTOR].arg);
+  else
+    clue3DParameters.outlierDeltaFactor = 2.f;
+
+  if (options[CLUE3D_DENSITY_SIBLING_LAYERS]) {
+    clue3DParameters.densitySiblingLayers = std::stoi(options[CLUE3D_DENSITY_SIBLING_LAYERS].arg, nullptr, 10);
+  } else
+    clue3DParameters.densitySiblingLayers = 2;
+  
+  cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
+
+  if (parse.nonOptionsCount() > 0) {
+    cerr << "Non options parameters passed ! Aborting" << endl;
+    return 1;
+  }
+
+  Runclustering tbCLUS(options[INPUT_FILE_LIST].arg, options[OUTPUT_FILE].arg, clueParameters, clue3DParameters);
   tbCLUS.EventLoop();
   return 0;
 }
