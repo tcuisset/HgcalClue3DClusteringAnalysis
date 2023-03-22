@@ -47,8 +47,14 @@ public :
    vector<unsigned int> *ce_clean_layer;
    vector<float>   *ce_clean_energy_MeV;
    Float_t         beamEnergy;
+   Float_t         trueBeamEnergy; // only filled if present in input dataset, ie for simulation
    vector<float>   *impactX;
    vector<float>   *impactY;
+
+   Double_t DWC_b_x; ///< from delay wire chambers :  track offsets = impact onto EE
+   Double_t DWC_b_y;
+   Float_t DWC_trackChi2_X; ///< from delay wire chambers : chi2 of extrapolated tracks, straight line model
+   Float_t DWC_trackChi2_Y;
 
    //   TBNtupleAnalyzer(TTree * tree = 0);
 //   Tree *fChain;  //! pointer to the analyzed TTree or TChain
@@ -104,8 +110,19 @@ void TBNtupleAnalyzer::Init(TTree *tree, bool shiftRechits)
    fChain->SetBranchAddress("ce_clean_layer", &ce_clean_layer);
    fChain->SetBranchAddress("ce_clean_energy_MeV", &ce_clean_energy_MeV);
    fChain->SetBranchAddress("beamEnergy", &beamEnergy);
+
+   if (fChain->GetBranch("trueBeamEnergy")) {
+      fChain->SetBranchAddress("trueBeamEnergy", &trueBeamEnergy);
+   }
+
+   //Delay wire chambers
    fChain->SetBranchAddress("impactX_unshifted", &impactX);
    fChain->SetBranchAddress("impactY_unshifted", &impactY);
+   fChain->SetBranchAddress("DWC_b_x", &DWC_b_x);
+   fChain->SetBranchAddress("DWC_b_y", &DWC_b_y);
+   fChain->SetBranchAddress("DWC_trackChi2_X", &DWC_trackChi2_X);
+   fChain->SetBranchAddress("DWC_trackChi2_Y", &DWC_trackChi2_Y);
+
    Notify();
 }
 

@@ -1,40 +1,46 @@
 # Format of input ROOT tree for ClusteringAnalysis
+see details : <https://indico.cern.ch/event/770743/contributions/3204606/attachments/1747143/2829163/Reco_ntuples_06Nov2018.pdf> and <https://gitlab.cern.ch/cms-hgcal-tb/TestBeam/-/wikis/samples/ntuples-description>
 TTree name : relevant_branches
 Columns :
 * event / i
 * run /i 
-* NRecHits /i
+* NRecHits /i : branch entirely identical for whole event with nb of reconstructed hits
 * ce_clean_detid : vector<uint>
 * ce_clean_x : vector<float> -> Point position
 * ce_clean_y : vector<float>
 * ce_clean_z : vector<float>
 * ce_clean_layer : vector<uint> -> Layer number of hit
+* ce_clean_energy : vector<float> -> Energy in MIP
+* ce_clean_energy_MeV : vector<float> -> Energy in MeV
+* beamEnergy /F : nominal beam energy (20, 50, ... 300 GeV)
 
-branch: ce_clean_energy_MeV   44126381
+For simulation only :
+* trueBeamEnergy : true particle momentum,
 
-branch: beamEnergy                 600
 
 ## impact_shifted
 For each event : vector<float> of length 40 (nb of layers)
-branch: impactX_shifted       
-branch: impactY_shifted       
+* impactX_shifted  -> to be compared against ce_clean_x (shifts have been applied to this purpose)
+* impactY_shifted       
 
+For data only : 
+* ce_clean_x_shifted -> shifted hits positions to take into account misalignment of different layers of HGCAL prototype  
+* impactX_unshifted -> impact values, without any shift, to compare against ce_clean_x_shifted
 
-
-* Instance
-* event.eve
-
-* NRechits :branch entirely identical for whole event with nb of reconstructed hits
+## DWC information (see <https://gitlab.cern.ch/cms-hgcal-tb/TestBeam/-/wikis/samples/ntuples-description>)
+ * DWC_b_x and DWC_b_y : track offsets = impact onto EE to make cuts on events where beam is too far of center of DWC and detector
+ * DWC_trackChi2_X and DWC_trackChi2_Y : chi2 of extrapolated tracks, straight line model
 
 # Format of output
 ## 2nd output root file : CLUE_clusters.root
 one TTree name clusters
 beamEnergy : float
 NRechits : uint
-impactX, impactY : vector<float> of length 40 (nb of layers)
+impactX, impactY : vector<float> of length 40 (nb of layers). Cuurently it is always unshifted
+DWC_b_x, DWC_trackChi2_X, .. : same as input
 
 rechits_* -> PointsCloud (vector branch) :
-  std::vector<float> x;
+  std::vector<float> x;  // Whether it is shifted or not depends on --shift-rechits command line parameter
   std::vector<float> y;
   std::vector<float> z;
   std::vector<unsigned int> layer; 

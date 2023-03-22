@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
     cout << "Not shifting rechits positions (suitable for simulation only)" << endl;
 
   cout << endl;
-  
+
   // Dealing with input files
   if (parse.nonOptionsCount() > 0 && options[INPUT_FILE_LIST]) {
     cerr << "You cannot pass an input file list as a file at the same time as input files on the command line ! Aborting" << endl;
@@ -284,8 +284,18 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("beamEnergy", &beamEnergy);
   clusters_tree.Branch("ntupleNumber", &currentNtupleNumber);
   clusters_tree.Branch("NRechits", &NRechits);
+
+  if (fChain->GetBranch("trueBeamEnergy")) { //If branch exists in input dataset, copy it to output
+    clusters_tree.Branch("trueBeamEnergy", &trueBeamEnergy);
+  }
+
+  // Delay wire chambers data
   clusters_tree.Branch("impactX", &impactX); //These are vector<float> of size 40 (nb of layers)
   clusters_tree.Branch("impactY", &impactY);
+  clusters_tree.Branch("DWC_b_x", &DWC_b_x);
+  clusters_tree.Branch("DWC_b_y", &DWC_b_y);
+  clusters_tree.Branch("DWC_trackChi2_X", &DWC_trackChi2_X);
+  clusters_tree.Branch("DWC_trackChi2_Y", &DWC_trackChi2_Y);
 
   clusters_tree.Branch("rechits_x", &pcloud.x);
   clusters_tree.Branch("rechits_y", &pcloud.y);
