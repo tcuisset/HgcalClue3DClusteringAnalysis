@@ -172,7 +172,7 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
 /**
  * For all 2D clusters, compute whether it is a seed, outlier, or follower (in this case register to the nearest higher)
  * Then expand clusters from seeds (setting point.clusterIndex for all points in each cluster)
- * \param params Clue3D parameters (used are deltac, outlierDeltaFactor and rhoc)
+ * \param params Clue3D parameters (used are deltac, outlierDeltaFactor, rhoc and criticalZDistanceLyr)
  * \return number of 3D clusters created
 */
 int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& params) {
