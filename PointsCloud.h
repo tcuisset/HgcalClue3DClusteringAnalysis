@@ -54,7 +54,7 @@ struct PointsCloud {
   // Output variables : vectors of size n
   std::vector<float> rho; ///< Local energy density
   std::vector<float> delta; ///< Distance to nearest highest
-  std::vector<int> nearestHigher; ///< ID of nearest highest
+  std::vector<int> nearestHigher; ///< ID of nearest highest (-1 in case no nearest higher)
   std::vector<std::vector<int>> followers; ///< List of points that follow this point (ie points which are neither seeds nor outliers and for which we are the nearest higher)
   std::vector<char> pointType; ///< Is the point a follower, a seed or an outlier (use enum PointType for values)
   std::vector<int> clusterIndex; ///< ID of the cluster this point is member of
