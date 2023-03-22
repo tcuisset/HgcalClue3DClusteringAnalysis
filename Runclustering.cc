@@ -99,9 +99,10 @@ struct Arg: public option::Arg
 };
 
 
-enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST,
+enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR,
   CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS};
+enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
  {UNKNOWN, 0,"" , ""    ,option::Arg::None, "USAGE: runclustering [options]\n\n"
@@ -109,6 +110,8 @@ const option::Descriptor usage[] =
  {HELP,    0,"" , "help",option::Arg::None, "  --help  \tPrint usage and exit." },
  {OUTPUT_FILE, 0,"o", "output-file",Arg::NonEmpty, "-o, --output-file=  \tLocation of output file" },
  {INPUT_FILE_LIST, 0, "f", "input-file-list", Arg::NonEmpty, "-f, --input-file-list= \t Path to a file holding the paths of all the input files to read"},
+ {SHIFT_RECHITS, ENABLE, "", "shift-rechits", Arg::None, "--shift-rechits : use ce_clean_x_shifted and impactX_unshifted columns (suitable for data)."},
+ {SHIFT_RECHITS, DISABLE, "", "no-shift-rechits", Arg::None, "--no-shift-rechits :  use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo)"},
  {CLUE_DC, 0, "", "clue-dc", Arg::RequiredFloat, "--clue-dc= \t CLUE2D critical distance parameter"},
  {CLUE_RHOC, 0, "", "clue-rhoc", Arg::RequiredFloat, "--clue-rhoc= \t CLUE2D critical density parameter"},
  {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
@@ -137,6 +140,11 @@ int main(int argc, char *argv[])
   if (options[HELP] || argc == 0 || options[UNKNOWN]) {
     option::printUsage(std::cout, usage);
     return 0;
+  }
+  if (!options[SHIFT_RECHITS]) {
+    cerr << "Either --shift-rechits or --no-shift-rechits must be specified" << endl;
+    option::printUsage(std::cout, usage);
+    return 1;
   }
 
   ClueAlgoParameters clueParameters;
@@ -186,7 +194,13 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  Runclustering tbCLUS(options[INPUT_FILE_LIST].arg, options[OUTPUT_FILE].arg, clueParameters, clue3DParameters);
+  if (options[SHIFT_RECHITS].last()->type() == ENABLE)
+    cout << "Shifting rechits positions (suitable for data only)" << endl;
+  else
+    cout << "Not shifting rechits positions (suitable for simulation only)" << endl;
+
+  Runclustering tbCLUS(options[INPUT_FILE_LIST].arg, options[OUTPUT_FILE].arg, clueParameters, clue3DParameters,
+    options[SHIFT_RECHITS].last()->type() == ENABLE);
   tbCLUS.EventLoop();
   return 0;
 }
@@ -232,8 +246,8 @@ void Runclustering::EventLoop() {
   clusters_tree.Branch("beamEnergy", &beamEnergy);
   clusters_tree.Branch("ntupleNumber", &currentNtupleNumber);
   clusters_tree.Branch("NRechits", &NRechits);
-  clusters_tree.Branch("impactX", &impactX_shifted); //These are vector<float> of size 40 (nb of layers)
-  clusters_tree.Branch("impactY", &impactY_shifted);
+  clusters_tree.Branch("impactX", &impactX); //These are vector<float> of size 40 (nb of layers)
+  clusters_tree.Branch("impactY", &impactY);
 
   clusters_tree.Branch("rechits_x", &pcloud.x);
   clusters_tree.Branch("rechits_y", &pcloud.y);

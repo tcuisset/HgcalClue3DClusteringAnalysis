@@ -34,7 +34,8 @@ class Runclustering : public TBNtupleAnalyzer {
   */
   Runclustering(const TString &inputFileList,
                   const char *outFileName,
-                  ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams
+                  ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams,
+                  bool shiftRechits
                  ); 
                                               
   ~Runclustering();
@@ -62,7 +63,7 @@ class Runclustering : public TBNtupleAnalyzer {
 
 Runclustering::Runclustering(
     const TString &inputFileList, const char *outFileName,
-    ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams) 
+    ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams, bool shiftRechits) 
     : clueParams_(clueParams), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
   
   TChain *tree = new TChain("relevant_branches");
@@ -73,7 +74,7 @@ Runclustering::Runclustering(
   }
 
 
-  TBNtupleAnalyzer::Init(tree); //Init branch pointers for reading TTree 
+  TBNtupleAnalyzer::Init(tree, shiftRechits); //Init branch pointers for reading TTree 
 
   gSystem->Exec(TString("mkdir -p $(dirname \"") + outFileName +  "\")"); //Create directories as needed
   output_file_ = new TFile(outFileName, "RECREATE");

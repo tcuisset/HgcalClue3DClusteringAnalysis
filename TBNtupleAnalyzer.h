@@ -26,7 +26,7 @@ public :
      return fChain ? fChain->GetTree()->GetEntry(entry, getall) : 0;
    }
    //Long64_t LoadTree(Long64_t entry);
-   void     Init(TTree *tree);
+   void     Init(TTree *tree, bool shiftRechits);
    //void     Loop();
    Bool_t   Notify();
    //void     Show(Long64_t entry = -1);
@@ -47,22 +47,8 @@ public :
    vector<unsigned int> *ce_clean_layer;
    vector<float>   *ce_clean_energy_MeV;
    Float_t         beamEnergy;
-   vector<float>   *impactX_shifted;
-   vector<float>   *impactY_shifted;
-
-   // List of branches
-   TBranch        *b_event;   //!
-   TBranch        *b_run;   //!
-   TBranch        *b_NRechits;   //!
-   TBranch        *b_ce_clean_detid;   //!
-   TBranch        *b_ce_clean_x;   //!
-   TBranch        *b_ce_clean_y;   //!
-   TBranch        *b_ce_clean_z;   //!
-   TBranch        *b_ce_clean_layer;   //!
-   TBranch        *b_ce_clean_energy_MeV;   //!
-   TBranch        *b_beamEnergy;   //!
-   TBranch        *b_impactX_shifted;   //!
-   TBranch        *b_impactY_shifted;   //!
+   vector<float>   *impactX;
+   vector<float>   *impactY;
 
    //   TBNtupleAnalyzer(TTree * tree = 0);
 //   Tree *fChain;  //! pointer to the analyzed TTree or TChain
@@ -78,8 +64,11 @@ public :
 #ifdef TBNtupleAnalyzer_cxx
 
 
-
-void TBNtupleAnalyzer::Init(TTree *tree)
+/**
+ * \param shiftRechits : if true, use ce_clean_x_shifted and impactX_unshifted columns (suitable for data).
+ *          if false, use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo)
+*/
+void TBNtupleAnalyzer::Init(TTree *tree, bool shiftRechits)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
@@ -96,26 +85,27 @@ void TBNtupleAnalyzer::Init(TTree *tree)
    ce_clean_z = 0;
    ce_clean_layer = 0;
    ce_clean_energy_MeV = 0;
-   impactX_shifted = 0;
-   impactY_shifted = 0;
+   impactX = 0;
+   impactY = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("event", &event, &b_event);
-   fChain->SetBranchAddress("run", &run, &b_run);
-   fChain->SetBranchAddress("NRechits", &NRechits, &b_NRechits);
-   fChain->SetBranchAddress("ce_clean_detid", &ce_clean_detid, &b_ce_clean_detid);
-   fChain->SetBranchAddress("ce_clean_x", &ce_clean_x, &b_ce_clean_x);
-   fChain->SetBranchAddress("ce_clean_y", &ce_clean_y, &b_ce_clean_y);
-   fChain->SetBranchAddress("ce_clean_z", &ce_clean_z, &b_ce_clean_z);
-   fChain->SetBranchAddress("ce_clean_layer", &ce_clean_layer, &b_ce_clean_layer);
-   fChain->SetBranchAddress("ce_clean_energy_MeV", &ce_clean_energy_MeV, &b_ce_clean_energy_MeV);
-   fChain->SetBranchAddress("beamEnergy", &beamEnergy, &b_beamEnergy);
-   fChain->SetBranchAddress("impactX_shifted", &impactX_shifted, &b_impactX_shifted);
-   fChain->SetBranchAddress("impactY_shifted", &impactY_shifted, &b_impactY_shifted);
+   fChain->SetBranchAddress("event", &event);
+   fChain->SetBranchAddress("run", &run);
+   fChain->SetBranchAddress("NRechits", &NRechits);
+   fChain->SetBranchAddress("ce_clean_detid", &ce_clean_detid);
+   TString rechitsShiftString(shiftRechits ? "_shifted" : "unshifted");
+   fChain->SetBranchAddress(TString("ce_clean_x")+rechitsShiftString, &ce_clean_x);
+   fChain->SetBranchAddress(TString("ce_clean_y")+rechitsShiftString, &ce_clean_y);
+   fChain->SetBranchAddress("ce_clean_z", &ce_clean_z);
+   fChain->SetBranchAddress("ce_clean_layer", &ce_clean_layer);
+   fChain->SetBranchAddress("ce_clean_energy_MeV", &ce_clean_energy_MeV);
+   fChain->SetBranchAddress("beamEnergy", &beamEnergy);
+   fChain->SetBranchAddress("impactX_unshifted", &impactX);
+   fChain->SetBranchAddress("impactY_unshifted", &impactY);
    Notify();
 }
 
