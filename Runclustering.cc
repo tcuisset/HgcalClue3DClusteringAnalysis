@@ -7,6 +7,7 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include "CLUEAlgo.h"
@@ -37,6 +38,31 @@ void dumpSoA(const PointsCloud & points) {
       << " nearestHigher = " << points.nearestHigher[c]
       << std::endl;
   }
+}
+
+/**
+ * Opens file fileListPath and return a vector containing all lines (except empty lines)
+*/
+std::vector<std::string> readFileList(const char* fileListPath)
+{
+  std::vector<std::string> listOfFiles;
+  std::ifstream file("Read.txt");
+  if (!file.is_open()) {
+    std::cerr << "** ERROR: Can't open '" << fileListPath << "' for input"
+              << std::endl;
+    throw std::runtime_error("File list opening failed");
+  }
+
+  std::string str; 
+  while (std::getline(file, str))
+  {
+    if(str.find_first_not_of(' ') != std::string::npos)
+    {
+      //This line does not have only whitespace
+      listOfFiles.push_back(str);
+    }
+  }
+  return listOfFiles;
 }
 
 struct Arg: public option::Arg
@@ -106,6 +132,7 @@ enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
  {UNKNOWN, 0,"" , ""    ,option::Arg::None, "USAGE: runclustering [options]\n\n"
+                                            "Non-options : input files (can also be specified by -f parameter)\n"
                                             "Options:" },
  {HELP,    0,"" , "help",option::Arg::None, "  --help  \tPrint usage and exit." },
  {OUTPUT_FILE, 0,"o", "output-file",Arg::NonEmpty, "-o, --output-file=  \tLocation of output file" },
@@ -189,17 +216,26 @@ int main(int argc, char *argv[])
   
   cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
 
-  if (parse.nonOptionsCount() > 0) {
-    cerr << "Non options parameters passed ! Aborting" << endl;
-    return 1;
-  }
-
+  // Shifting rechits
   if (options[SHIFT_RECHITS].last()->type() == ENABLE)
     cout << "Shifting rechits positions (suitable for data only)" << endl;
   else
     cout << "Not shifting rechits positions (suitable for simulation only)" << endl;
 
-  Runclustering tbCLUS(options[INPUT_FILE_LIST].arg, options[OUTPUT_FILE].arg, clueParameters, clue3DParameters,
+  // Dealing with input files
+  if (parse.nonOptionsCount() > 0 && options[INPUT_FILE_LIST]) {
+    cerr << "You cannot pass an input file list as a file at the same time as input files on the command line ! Aborting" << endl;
+    return 1;
+  }
+  std::vector<std::string> listOfFilePaths;
+  for (int i = 0; i < parse.nonOptionsCount(); i++) {
+    listOfFilePaths.push_back(parse.nonOption(i));
+  }
+  if (options[INPUT_FILE_LIST]) {
+    listOfFilePaths = readFileList(options[INPUT_FILE_LIST].arg);
+  }
+
+  Runclustering tbCLUS(std::move(listOfFilePaths), options[OUTPUT_FILE].arg, clueParameters, clue3DParameters,
     options[SHIFT_RECHITS].last()->type() == ENABLE);
   tbCLUS.EventLoop();
   return 0;

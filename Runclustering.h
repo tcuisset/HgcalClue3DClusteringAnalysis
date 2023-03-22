@@ -2,7 +2,6 @@
 #define Runclustering_H
 
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <vector>
 #include <array>
@@ -29,17 +28,16 @@
 class Runclustering : public TBNtupleAnalyzer {
  public:
   /**
-   * \param inputFileList path to a file listing all paths to the input root files
+   * \param listOfFilePaths list of paths to files holding trees to load
    * \param energy not used (set in EventLoop)
   */
-  Runclustering(const TString &inputFileList,
+  Runclustering(std::vector<std::string> listOfFilePaths,
                   const char *outFileName,
                   ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams,
                   bool shiftRechits
                  ); 
                                               
   ~Runclustering();
-  Bool_t FillChain(TChain *chain, const TString &inputFileList); ///< Add all trees from the file list to the given TChain
   Long64_t LoadTree(Long64_t entry);
   void EventLoop();  //, const char *,const char *);
 
@@ -62,17 +60,16 @@ class Runclustering : public TBNtupleAnalyzer {
 
 
 Runclustering::Runclustering(
-    const TString &inputFileList, const char *outFileName,
+    std::vector<std::string> listOfFilePaths, const char *outFileName,
     ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams, bool shiftRechits) 
     : clueParams_(clueParams), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
   
   TChain *tree = new TChain("relevant_branches");
-  if (!FillChain(tree, inputFileList)) {
-    std::cerr << "Cannot get the tree " << std::endl;
-  } else {
-    std::cout << "Initiating analysis of dataset " << std::endl;
+  for (std::string path : listOfFilePaths) {
+    tree->Add(path.c_str());
   }
-
+  std::cout << "No. of Entries in chain  : " << tree->GetEntries() << std::endl
+    << "Initiating analysis of dataset " << std::endl;
 
   TBNtupleAnalyzer::Init(tree, shiftRechits); //Init branch pointers for reading TTree 
 
@@ -83,35 +80,6 @@ Runclustering::Runclustering(
   //BookHistogram(outFileName, config, energy);
 }
 
-
-Bool_t Runclustering::FillChain(
-    TChain *chain,
-    const TString &inputFileList) {
-                                   
-
-  ifstream infile(inputFileList, ifstream::in);
-  std::string buffer;
-
-  if (!infile.is_open()) {
-    std::cerr << "** ERROR: Can't open '" << inputFileList << "' for input"
-              << std::endl;
-    return kFALSE;
-  }
-
-  std::cout << "TreeUtilities : FillChain " << std::endl;
-  while (1) {
-    infile >> buffer;
-    if (!infile.good()) break;
-
-    chain->Add(buffer.c_str());
-
-  }
-  std::cout << "No. of Entries in chain  : " << chain->GetEntries()
-            << std::endl;
-
-
-  return kTRUE;
-}
 
 Long64_t Runclustering::LoadTree(Long64_t entry) {
   // Set the environment to read one entry
