@@ -16,6 +16,7 @@ struct Clue3DAlgoParameters
     std::array<float, 2> rhoc;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL
     float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
+    bool densityOnSameLayer;  ///< Consider layer clusters on the same layer when computing local energy density
     bool nearestHigherOnSameLayer; ///< Allow the nearestHigher to be located on the same layer
     float criticalSelfDensity; ///< Minimum ratio of self_energy/local_density to become a seed. (roughly 1/(densitySiblingLayers+1) )
 
@@ -25,7 +26,9 @@ struct Clue3DAlgoParameters
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
                << ", densitySiblingLayers = " << p.densitySiblingLayers
-               << ", nearestHigherOnSameLayer = " << p.nearestHigherOnSameLayer;
+               << ", densityOnSameLayer = " << p.densityOnSameLayer
+               << ", nearestHigherOnSameLayer = " << p.nearestHigherOnSameLayer
+               << ", criticalSelfDensity = " << p.criticalSelfDensity;
         return stream;
     }
 };
@@ -43,11 +46,9 @@ inline float distance3d(PointsCloud &points, int i, int j) {
 /**
  * Compute rho, the local energy density, for each 2D cluster (in 3D)
  * Note the way the distance is computed (ignoring layer completely in the calculation of distance) for computing rho
- * \param deltac distance parameters (array as depends on layer)
- * \param densitySiblingLayers How many layers to consider before and beyond each cluster to compute rho
+ * \param params CLUE3D params (used : dc, densitySiblingLayers, densityOnSameLayer)
 */
-void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
-			 PointsCloud &points, std::array<float, 2> dc, int densitySiblingLayers) {
+void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all 2D clusters
   for (unsigned int i = 0; i < points.n; i++) {
     int clayer = points.layer[i]; ///< Layer of 2D cluster
@@ -55,11 +56,14 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
     int maxLayer = NLAYERS;
 
     //Loop over layers that are within densitySiblingLayers of current layer
-    minLayer = std::max(clayer - densitySiblingLayers, NLAYER1);
-    maxLayer = std::min(clayer + densitySiblingLayers, maxLayer);
+    minLayer = std::max(clayer - params.densitySiblingLayers, NLAYER1);
+    maxLayer = std::min(clayer + params.densitySiblingLayers, maxLayer);
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
+      if (!params.densityOnSameLayer && currentLayer == clayer)
+        continue;
+      
       LayerTiles &lt = d_hist[currentLayer];
-      float dc_effective = currentLayer < 41 ? dc[0] : dc[1];
+      float dc_effective = currentLayer < 41 ? params.deltac[0] : params.deltac[1];
       // get search box (2D)
       std::array<int, 4> search_box = lt.searchBox(
 	     points.x[i] - dc_effective, points.x[i] + dc_effective,

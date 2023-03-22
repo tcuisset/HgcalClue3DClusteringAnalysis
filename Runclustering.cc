@@ -128,7 +128,7 @@ struct Arg: public option::Arg
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
   CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
-    CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY};
+    CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY, CLUE3D_DENSITY_SAME_LAYER};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
@@ -151,6 +151,8 @@ const option::Descriptor usage[] =
  {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
  {CLUE3D_DENSITY_SIBLING_LAYERS, 0, "", "clue3d-density-sibling-layers", Arg::Numeric, "--clue3d-density-sibling-layers= \t CLUE3D density sibling layers parameters, define range of layers +- layer# to look for another 2D cluster"},
+ {CLUE3D_DENSITY_SAME_LAYER, ENABLE, "", "densityOnSameLayer", Arg::None, "--densityOnSameLayer \t CLUE3D : Consider layer clusters on the same layer when computing local energy density"},
+ {CLUE3D_DENSITY_SAME_LAYER, DISABLE, "", "no-densityOnSameLayer", Arg::None, "--no-densityOnSameLayer \t CLUE3D : Do not consider layer clusters on the same layer when computing local energy density"},
  {CLUE3D_NEAREST_HIGHER_SAME_LAYER, ENABLE, "", "nearestHigherOnSameLayer", Arg::None, "--nearestHigherOnSameLayer \t CLUE3D : Allow the nearestHigher to be located on the same layer"},
  {CLUE3D_NEAREST_HIGHER_SAME_LAYER, DISABLE, "", "no-nearestHigherOnSameLayer", Arg::None, "--no-nearestHigherOnSameLayer \t CLUE3D : Do not allow the nearestHigher to be located on the same layer"},
  {CLUE3D_CRITICAL_Z_DISTANCE, 0, "", "clue3d-criticalZDistanceLyr", Arg::Numeric, "--clue3d-criticalZDistanceLyr= \t CLUE3D Minimal distance in layers along the Z axis from nearestHigher to become a seed"},
@@ -234,6 +236,11 @@ int main(int argc, char *argv[])
   } else
     clue3DParameters.densitySiblingLayers = 2;
   
+  if (options[CLUE3D_DENSITY_SAME_LAYER])
+    clue3DParameters.densityOnSameLayer = options[CLUE3D_DENSITY_SAME_LAYER].last()->type() == ENABLE;
+  else
+    clue3DParameters.densityOnSameLayer = false;
+
   if (options[CLUE3D_NEAREST_HIGHER_SAME_LAYER])
     clue3DParameters.nearestHigherOnSameLayer = options[CLUE3D_NEAREST_HIGHER_SAME_LAYER].last()->type() == ENABLE;
   else
@@ -422,7 +429,7 @@ void Runclustering::EventLoop() {
 
 
 
-    calculate_density3d(tiles2d, pcloud2d, clue3DParams_.deltac, clue3DParams_.densitySiblingLayers);
+    calculate_density3d(tiles2d, pcloud2d, clue3DParams_);
     calculate_distanceToHigher3d(tiles2d, pcloud2d, clue3DParams_);
     auto total_clusters3d = findAndAssign_clusters3d(pcloud2d, clue3DParams_);
     auto clusters3d = getClusters3d(total_clusters3d, pcloud2d);
