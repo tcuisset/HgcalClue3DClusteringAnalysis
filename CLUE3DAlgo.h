@@ -17,6 +17,7 @@ struct Clue3DAlgoParameters
     float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
     bool densityOnSameLayer;  ///< Consider layer clusters on the same layer when computing local energy density
+    float kernelDensityFactor; ///< Kernel factor to be applied to other LC while computing the local density
     bool nearestHigherOnSameLayer; ///< Allow the nearestHigher to be located on the same layer
     float criticalSelfDensity; ///< Minimum ratio of self_energy/local_density to become a seed. (roughly 1/(densitySiblingLayers+1) )
 
@@ -27,6 +28,7 @@ struct Clue3DAlgoParameters
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
                << ", densitySiblingLayers = " << p.densitySiblingLayers
                << ", densityOnSameLayer = " << p.densityOnSameLayer
+               << ", kernelDensityFactor = " << p.kernelDensityFactor
                << ", nearestHigherOnSameLayer = " << p.nearestHigherOnSameLayer
                << ", criticalSelfDensity = " << p.criticalSelfDensity;
         return stream;
@@ -46,7 +48,7 @@ inline float distance3d(PointsCloud &points, int i, int j) {
 /**
  * Compute rho, the local energy density, for each 2D cluster (in 3D)
  * Note the way the distance is computed (ignoring layer completely in the calculation of distance) for computing rho
- * \param params CLUE3D params (used : dc, densitySiblingLayers, densityOnSameLayer)
+ * \param params CLUE3D params (used : dc, densitySiblingLayers, densityOnSameLayer, kernelDensityFactor)
 */
 void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all 2D clusters
@@ -91,7 +93,7 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &p
             
             if (dist_ij <= dc_effective) {
               // sum weights within N_{dc_effective}(i)
-              points.rho[i] += (i == j ? 1.f : 0.5f) * points.weight[j];
+              points.rho[i] += (i == j ? 1.f : params.kernelDensityFactor) * points.weight[j];
             }
           }  // end of interate inside this bin
         }
