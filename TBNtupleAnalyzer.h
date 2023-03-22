@@ -97,7 +97,7 @@ void TBNtupleAnalyzer::Init(TTree *tree, bool shiftRechits)
    fChain->SetBranchAddress("run", &run);
    fChain->SetBranchAddress("NRechits", &NRechits);
    fChain->SetBranchAddress("ce_clean_detid", &ce_clean_detid);
-   TString rechitsShiftString(shiftRechits ? "_shifted" : "unshifted");
+   TString rechitsShiftString(shiftRechits ? "_shifted" : "_unshifted");
    fChain->SetBranchAddress(TString("ce_clean_x")+rechitsShiftString, &ce_clean_x);
    fChain->SetBranchAddress(TString("ce_clean_y")+rechitsShiftString, &ce_clean_y);
    fChain->SetBranchAddress("ce_clean_z", &ce_clean_z);
