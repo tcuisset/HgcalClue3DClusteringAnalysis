@@ -20,8 +20,7 @@ struct Clue3DAlgoParameters
         stream << "dc = " << p.dc[0] 
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
-               << ", densitySiblingLayers = " << p.densitySiblingLayers
-               << std::endl;
+               << ", densitySiblingLayers = " << p.densitySiblingLayers;
         return stream;
     }
 };

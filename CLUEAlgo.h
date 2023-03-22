@@ -19,8 +19,7 @@ struct ClueAlgoParameters
     friend std::ostream& operator<< (std::ostream& stream, const ClueAlgoParameters& p) {
         stream << "dc = " << p.dc[0] 
                << ", rhoc = " << p.rhoc[0]
-               << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
-               << std::endl;
+               << ", outlierDeltaFactor = " << p.outlierDeltaFactor;
         return stream;
     }
 };

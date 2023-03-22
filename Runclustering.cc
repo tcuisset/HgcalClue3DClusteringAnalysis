@@ -222,6 +222,8 @@ int main(int argc, char *argv[])
   else
     cout << "Not shifting rechits positions (suitable for simulation only)" << endl;
 
+  cout << endl;
+  
   // Dealing with input files
   if (parse.nonOptionsCount() > 0 && options[INPUT_FILE_LIST]) {
     cerr << "You cannot pass an input file list as a file at the same time as input files on the command line ! Aborting" << endl;
