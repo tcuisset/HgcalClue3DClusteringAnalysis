@@ -11,14 +11,16 @@
 
 struct Clue3DAlgoParameters
 {
-    std::array<float, 2> deltac;  ///< Critical distance parameters, index 0 for HGCAL, index 1 for AHCAL
+    std::array<float, 2> deltac;  ///< Critical distance parameters, index 0 for HGCAL, index 1 for AHCAL (in (x; y) plane)
+    int criticalZDistanceLyr;  ///< Minimal distance in layers along the Z axis from nearestHigher to become a seed
     std::array<float, 2> rhoc;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL
-    float outlierDeltaFactor;
+    float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
     bool nearestHigherOnSameLayer; ///< Allow the nearestHigher to be located on the same layer
 
     friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
         stream << "deltac = " << p.deltac[0] 
+               << ", criticalZDistanceLyr = " << p.criticalZDistanceLyr
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
                << ", densitySiblingLayers = " << p.densitySiblingLayers
@@ -163,30 +165,32 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
 /**
  * For all 2D clusters, compute whether it is a seed, outlier, or follower (in this case register to the nearest higher)
  * Then expand clusters from seeds (setting point.clusterIndex for all points in each cluster)
- * \param dc distance parameters (array as depends on layer)
- * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
- * \param rhoc critical energy density parameters (array as depends on layer)
+ * \param params Clue3D parameters (used are deltac, outlierDeltaFactor and rhoc)
  * \return number of 3D clusters created
 */
-int findAndAssign_clusters3d(PointsCloud &points, float outlierDeltaFactor,
-                           std::array<float, 2> dc,
-                           std::array<float, 2> rhoc) {
+int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& params) {
   int nClusters = 0;
 
   // find cluster seeds and outlier
   std::vector<int> localStack;
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
-    float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
-    float rhoc_effective = points.layer[i] < 41 ? rhoc[0] : rhoc[1];
+    float dc_effective = points.layer[i] < 41 ? params.deltac[0] : params.deltac[1];
+    float rhoc_effective = points.layer[i] < 41 ? params.rhoc[0] : params.rhoc[1];
     // initialize clusterIndex
     points.clusterIndex[i] = -1;
 
     float deltai = points.delta[i];
     float rhoi = points.rho[i];
+    int distanceInLayersToNearestHigher = -1;
+    if (points.nearestHigher[i] >= 0) {
+      distanceInLayersToNearestHigher = points.layer[i] > points.layer[points.nearestHigher[i]]
+        ? points.layer[i] : points.layer[points.nearestHigher[i]];
+    }
     // determine seed or outlier
-    bool isSeed = (deltai > dc_effective) && (rhoi >= rhoc_effective);
-    bool isOutlier = (deltai > outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
+    bool isSeed = (deltai > dc_effective || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
+                  && (rhoi >= rhoc_effective);
+    bool isOutlier = (deltai > params.outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       //std::cout<<"found seed"<<std::endl;  
     // set isSeed as 1
