@@ -127,7 +127,8 @@ struct Arg: public option::Arg
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
-  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, CLUE3D_CRITICAL_Z_DISTANCE};
+  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
+    CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
@@ -153,6 +154,7 @@ const option::Descriptor usage[] =
  {CLUE3D_NEAREST_HIGHER_SAME_LAYER, ENABLE, "", "nearestHigherOnSameLayer", Arg::None, "--nearestHigherOnSameLayer \t CLUE3D : Allow the nearestHigher to be located on the same layer"},
  {CLUE3D_NEAREST_HIGHER_SAME_LAYER, DISABLE, "", "no-nearestHigherOnSameLayer", Arg::None, "--no-nearestHigherOnSameLayer \t CLUE3D : Do not allow the nearestHigher to be located on the same layer"},
  {CLUE3D_CRITICAL_Z_DISTANCE, 0, "", "clue3d-criticalZDistanceLyr", Arg::Numeric, "--clue3d-criticalZDistanceLyr= \t CLUE3D Minimal distance in layers along the Z axis from nearestHigher to become a seed"},
+ {CLUE3D_CRITICAL_SELF_DENSITY, 0, "", "clue3d-criticalSelfDensity", Arg::RequiredFloat, "--clue3d-criticalSelfDensity= \t CLUE3D Minimum ratio of self_energy/local_density to become a seed."},
 
  {UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExamples:\n"
                                             "  ./runclustering -f files-single.txt -o ./CLUE_clusters.root\n"
@@ -236,6 +238,11 @@ int main(int argc, char *argv[])
     clue3DParameters.nearestHigherOnSameLayer = options[CLUE3D_NEAREST_HIGHER_SAME_LAYER].last()->type() == ENABLE;
   else
     clue3DParameters.nearestHigherOnSameLayer = false;
+  
+  if (options[CLUE3D_CRITICAL_SELF_DENSITY])
+    clue3DParameters.criticalSelfDensity = std::stof(options[CLUE3D_CRITICAL_SELF_DENSITY].arg);
+  else
+    clue3DParameters.criticalSelfDensity = 0.15f;
   
   cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
 

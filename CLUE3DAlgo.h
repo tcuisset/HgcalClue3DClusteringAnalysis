@@ -17,6 +17,7 @@ struct Clue3DAlgoParameters
     float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
     bool nearestHigherOnSameLayer; ///< Allow the nearestHigher to be located on the same layer
+    float criticalSelfDensity; ///< Minimum ratio of self_energy/local_density to become a seed. (roughly 1/(densitySiblingLayers+1) )
 
     friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
         stream << "deltac = " << p.deltac[0] 
@@ -189,7 +190,8 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
     }
     // determine seed or outlier
     bool isSeed = (deltai > dc_effective || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
-                  && (rhoi >= rhoc_effective);
+                  && (rhoi >= rhoc_effective)
+                  && (points.weight[i] / rhoi > params.criticalSelfDensity);
     bool isOutlier = (deltai > params.outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
     if (isSeed) {
       //std::cout<<"found seed"<<std::endl;  
