@@ -126,7 +126,7 @@ struct Arg: public option::Arg
 
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
-  CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR,
+  CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
   CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
@@ -142,6 +142,7 @@ const option::Descriptor usage[] =
  {CLUE_DC, 0, "", "clue-dc", Arg::RequiredFloat, "--clue-dc= \t CLUE2D critical distance parameter"},
  {CLUE_RHOC, 0, "", "clue-rhoc", Arg::RequiredFloat, "--clue-rhoc= \t CLUE2D critical density parameter"},
  {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
+ {CLUE_POSITION_DELTA_RHO2, 0, "", "clue-position-delta-rho2", Arg::RequiredFloat, "--clue-position-delta-rho2= \t CLUE2D max distance squared to look for cells away from highest energy cell when computing cluster position"},
  {CLUE3D_DC, 0, "", "clue3d-dc", Arg::RequiredFloat, "--clue3d-dc= \t CLUE3D critical distance parameter"},
  {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
@@ -176,9 +177,9 @@ int main(int argc, char *argv[])
 
   ClueAlgoParameters clueParameters;
   if (options[CLUE_DC])
-    clueParameters.dc = {std::stof(options[CLUE_DC].arg), -1.};
+    clueParameters.deltac = {std::stof(options[CLUE_DC].arg), -1.};
   else
-    clueParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
+    clueParameters.deltac = {1.3f, 3.f * sqrt(2.f) + 0.1f};
   
   constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
   if (options[CLUE_RHOC])
@@ -191,13 +192,18 @@ int main(int argc, char *argv[])
   else
     clueParameters.outlierDeltaFactor = 2.f;
   
+  if (options[CLUE_POSITION_DELTA_RHO2])
+    clueParameters.positionDeltaRho2 = std::stof(options[CLUE_POSITION_DELTA_RHO2].arg);
+  else
+    clueParameters.positionDeltaRho2 = 1.69f;
+  
   cout << "Using CLUE parameters : " << clueParameters << endl;
 
   Clue3DAlgoParameters clue3DParameters;
   if (options[CLUE3D_DC])
     clue3DParameters.dc = {std::stof(options[CLUE3D_DC].arg), -1.};
   else
-    clue3DParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1};
+    clue3DParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1f};
   
   if (options[CLUE3D_RHOC])
     clue3DParameters.rhoc = {std::stof(options[CLUE3D_RHOC].arg), -1.};
@@ -367,12 +373,12 @@ void Runclustering::EventLoop() {
     // Fill "TILES"
     compute_histogram(tiles, pcloud);
     // Calculate density quantities for points
-    calculate_density(tiles, pcloud, clueParams_.dc);
+    calculate_density(tiles, pcloud, clueParams_.deltac);
     // Calculate nearest higher density  point
-    calculate_distanceToHigher(tiles, pcloud, clueParams_.outlierDeltaFactor, clueParams_.dc);
+    calculate_distanceToHigher(tiles, pcloud, clueParams_.outlierDeltaFactor, clueParams_.deltac);
     // get seeds and followers
-    auto total_clusters = findAndAssign_clusters(pcloud, clueParams_.outlierDeltaFactor, clueParams_.dc, clueParams_.rhoc);
-    std::vector<Cluster> clusters = getClusters(total_clusters, pcloud);
+    auto total_clusters = findAndAssign_clusters(pcloud, clueParams_.outlierDeltaFactor, clueParams_.deltac, clueParams_.rhoc);
+    std::vector<Cluster> clusters = getClusters(total_clusters, pcloud, clueParams_);
     // Fill in the clusters_SoA
     clusters_soa.load(clusters);
 
