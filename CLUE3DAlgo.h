@@ -11,16 +11,18 @@
 
 struct Clue3DAlgoParameters
 {
-    std::array<float, 2> dc;
-    std::array<float, 2> rhoc;
+    std::array<float, 2> deltac;  ///< Critical distance parameters, index 0 for HGCAL, index 1 for AHCAL
+    std::array<float, 2> rhoc;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL
     float outlierDeltaFactor;
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
+    bool nearestHigherOnSameLayer; ///< Allow the nearestHigher to be located on the same layer
 
     friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
-        stream << "dc = " << p.dc[0] 
+        stream << "deltac = " << p.deltac[0] 
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
-               << ", densitySiblingLayers = " << p.densitySiblingLayers;
+               << ", densitySiblingLayers = " << p.densitySiblingLayers
+               << ", nearestHigherOnSameLayer = " << p.nearestHigherOnSameLayer;
         return stream;
     }
 };
@@ -38,7 +40,7 @@ inline float distance3d(PointsCloud &points, int i, int j) {
 /**
  * Compute rho, the local energy density, for each 2D cluster (in 3D)
  * Note the way the distance is computed (ignoring layer completely in the calculation of distance) for computing rho
- * \param dc distance parameters (array as depends on layer)
+ * \param deltac distance parameters (array as depends on layer)
  * \param densitySiblingLayers How many layers to consider before and beyond each cluster to compute rho
 */
 void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
@@ -93,17 +95,14 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist,
 
 /**
  * Compute, for each 2D cluster, the distance to nearest higher (and set the ID of the nearest higher)
- * \param dc distance parameters (array as depends on layer)
- * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
- * \param densitySiblingLayers How many layers to consider before and beyond each cluster to search for nearest higher
+ * \param params CLUE3D parameters (used are : deltac, outlierDeltaFactor, densitySiblingLayers, nearestHigherOnSameLayer) 
 */
 void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
-                                PointsCloud &points, float outlierDeltaFactor,
-				  std::array<float, 2> dc, int densitySiblingLayers) {
+                                PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
-    float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
-    float dm = outlierDeltaFactor * dc_effective;
+    float dc_effective = points.layer[i] < 41 ? params.deltac[0] : params.deltac[1];
+    float dm = params.outlierDeltaFactor * dc_effective;
     // default values of delta and nearest higher for i
     float delta_i = std::numeric_limits<float>::max();
     int nearestHigher_i = -1;
@@ -116,10 +115,11 @@ void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
     int clayer = points.layer[i];
 
     //Loop over layers that are within densitySiblingLayers of current layer
-    minLayer = std::max(clayer - densitySiblingLayers, NLAYER1);
-    maxLayer = std::min(clayer + densitySiblingLayers, maxLayer);
+    minLayer = std::max(clayer - params.densitySiblingLayers, NLAYER1);
+    maxLayer = std::min(clayer + params.densitySiblingLayers, maxLayer);
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
-      
+      if (!params.nearestHigherOnSameLayer && (currentLayer == clayer))
+        continue;
       
       // get search box (2D)
       //      LayerTiles &lt = d_hist[points.layer[currentLayer]];

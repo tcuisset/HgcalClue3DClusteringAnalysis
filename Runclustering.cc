@@ -127,7 +127,7 @@ struct Arg: public option::Arg
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
-  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS};
+  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
@@ -137,16 +137,22 @@ const option::Descriptor usage[] =
  {HELP,    0,"" , "help",option::Arg::None, "  --help  \tPrint usage and exit." },
  {OUTPUT_FILE, 0,"o", "output-file",Arg::NonEmpty, "-o, --output-file=  \tLocation of output file" },
  {INPUT_FILE_LIST, 0, "f", "input-file-list", Arg::NonEmpty, "-f, --input-file-list= \t Path to a file holding the paths of all the input files to read"},
+ 
  {SHIFT_RECHITS, ENABLE, "", "shift-rechits", Arg::None, "--shift-rechits : use ce_clean_x_shifted and impactX_unshifted columns (suitable for data)."},
  {SHIFT_RECHITS, DISABLE, "", "no-shift-rechits", Arg::None, "--no-shift-rechits :  use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo)"},
- {CLUE_DC, 0, "", "clue-dc", Arg::RequiredFloat, "--clue-dc= \t CLUE2D critical distance parameter"},
+ 
+ {CLUE_DC, 0, "", "clue-deltac", Arg::RequiredFloat, "--clue-deltac= \t CLUE2D critical distance parameter"},
  {CLUE_RHOC, 0, "", "clue-rhoc", Arg::RequiredFloat, "--clue-rhoc= \t CLUE2D critical density parameter"},
  {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
  {CLUE_POSITION_DELTA_RHO2, 0, "", "clue-position-delta-rho2", Arg::RequiredFloat, "--clue-position-delta-rho2= \t CLUE2D max distance squared to look for cells away from highest energy cell when computing cluster position"},
- {CLUE3D_DC, 0, "", "clue3d-dc", Arg::RequiredFloat, "--clue3d-dc= \t CLUE3D critical distance parameter"},
+ 
+ {CLUE3D_DC, 0, "", "clue3d-deltac", Arg::RequiredFloat, "--clue3d-deltac= \t CLUE3D critical distance parameter"},
  {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
  {CLUE3D_DENSITY_SIBLING_LAYERS, 0, "", "clue3d-density-sibling-layers", Arg::Numeric, "--clue3d-density-sibling-layers= \t CLUE3D density sibling layers parameters, define range of layers +- layer# to look for another 2D cluster"},
+ {CLUE3D_NEAREST_HIGHER_SAME_LAYER, ENABLE, "", "nearestHigherOnSameLayer", Arg::None, "--nearestHigherOnSameLayer \t CLUE3D : Allow the nearestHigher to be located on the same layer"},
+ {CLUE3D_NEAREST_HIGHER_SAME_LAYER, DISABLE, "", "no-nearestHigherOnSameLayer", Arg::None, "--no-nearestHigherOnSameLayer \t CLUE3D : Do not allow the nearestHigher to be located on the same layer"},
+
  {UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExamples:\n"
                                             "  ./runclustering -f files-single.txt -o ./CLUE_clusters.root\n"
                                             "  ./runclustering --clue-rhoc=2. -f files-single.txt -o ./CLUE_clusters.root\n" },
@@ -201,9 +207,9 @@ int main(int argc, char *argv[])
 
   Clue3DAlgoParameters clue3DParameters;
   if (options[CLUE3D_DC])
-    clue3DParameters.dc = {std::stof(options[CLUE3D_DC].arg), -1.};
+    clue3DParameters.deltac = {std::stof(options[CLUE3D_DC].arg), -1.};
   else
-    clue3DParameters.dc = {1.3f, 3.f * sqrt(2.f) + 0.1f};
+    clue3DParameters.deltac = {1.3f, 3.f * sqrt(2.f) + 0.1f};
   
   if (options[CLUE3D_RHOC])
     clue3DParameters.rhoc = {std::stof(options[CLUE3D_RHOC].arg), -1.};
@@ -219,6 +225,11 @@ int main(int argc, char *argv[])
     clue3DParameters.densitySiblingLayers = std::stoi(options[CLUE3D_DENSITY_SIBLING_LAYERS].arg, nullptr, 10);
   } else
     clue3DParameters.densitySiblingLayers = 2;
+  
+  if (options[CLUE3D_NEAREST_HIGHER_SAME_LAYER])
+    clue3DParameters.nearestHigherOnSameLayer = options[CLUE3D_NEAREST_HIGHER_SAME_LAYER].last()->type() == ENABLE;
+  else
+    clue3DParameters.nearestHigherOnSameLayer = false;
   
   cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
 
@@ -398,9 +409,9 @@ void Runclustering::EventLoop() {
 
 
 
-    calculate_density3d(tiles2d, pcloud2d, clue3DParams_.dc, clue3DParams_.densitySiblingLayers);
-    calculate_distanceToHigher3d(tiles2d, pcloud2d, clue3DParams_.outlierDeltaFactor, clue3DParams_.dc, clue3DParams_.densitySiblingLayers);
-    auto total_clusters3d = findAndAssign_clusters3d(pcloud2d, clue3DParams_.outlierDeltaFactor, clue3DParams_.dc, clue3DParams_.rhoc);
+    calculate_density3d(tiles2d, pcloud2d, clue3DParams_.deltac, clue3DParams_.densitySiblingLayers);
+    calculate_distanceToHigher3d(tiles2d, pcloud2d, clue3DParams_);
+    auto total_clusters3d = findAndAssign_clusters3d(pcloud2d, clue3DParams_.outlierDeltaFactor, clue3DParams_.deltac, clue3DParams_.rhoc);
     auto clusters3d = getClusters3d(total_clusters3d, pcloud2d);
     clusters3d_soa.load(clusters3d);
     
