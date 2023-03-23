@@ -24,7 +24,7 @@ struct Clue3DAlgoParameters
 
     friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
         stream << "densityXYDistanceSqr = " << p.densityXYDistanceSqr
-               << "criticalXYDistance = " << p.criticalXYDistance
+               << ", criticalXYDistance = " << p.criticalXYDistance
                << ", criticalZDistanceLyr = " << p.criticalZDistanceLyr
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
