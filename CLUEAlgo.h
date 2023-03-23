@@ -71,6 +71,7 @@ inline void updateLayersAndEnergies(PointsCloud &points,
 }
 
 ///< For all points in PointsCloud, add the index of the point into the correct bin of LayerTiles
+template<typename LayerTiles>
 void compute_histogram(std::array<LayerTiles, NLAYERS> &d_hist,
                        PointsCloud &points) {
   //    std::cout<<"points.n "<<points.n<<std::endl;
@@ -85,11 +86,11 @@ void compute_histogram(std::array<LayerTiles, NLAYERS> &d_hist,
  * Compute rho, the local energy density, for each point of the cloud (in 2D)
  * \param dc distance parameters (array as depends on layer)
 */
-void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
+void calculate_density(std::array<LayerTilesClue, NLAYERS> &d_hist,
                        PointsCloud &points, std::array<float, 2> dc) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
-    LayerTiles &lt = d_hist[points.layer[i]];
+    LayerTilesClue &lt = d_hist[points.layer[i]];
 
     float dc_effective = points.layer[i] < 41 ? dc[0] : dc[1];
 
@@ -126,7 +127,7 @@ void calculate_density(std::array<LayerTiles, NLAYERS> &d_hist,
  * \param dc distance parameters (array as depends on layer)
  * \param outlierDeltaFactor multiplicative factor to dc to get distance to search for nearest higher
 */
-void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
+void calculate_distanceToHigher(std::array<LayerTilesClue, NLAYERS> &d_hist,
                                 PointsCloud &points, float outlierDeltaFactor,
                                 std::array<float, 2> dc) {
   // loop over all points
@@ -141,7 +142,7 @@ void calculate_distanceToHigher(std::array<LayerTiles, NLAYERS> &d_hist,
     float rho_i = points.rho[i];
 
     // get search box
-    LayerTiles &lt = d_hist[points.layer[i]];
+    LayerTilesClue &lt = d_hist[points.layer[i]];
     std::array<int, 4> search_box =
         lt.searchBox(xi - dm, xi + dm, yi - dm, yi + dm);
 

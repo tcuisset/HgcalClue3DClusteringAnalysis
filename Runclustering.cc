@@ -398,7 +398,7 @@ void Runclustering::EventLoop() {
 
     // Compute clusters using CLUE
     //NLAYERS defined in LayersTilesConstants
-    std::array<LayerTiles, NLAYERS> tiles; ///< Array of LayerTiles (2D layer of tiles) for each layer
+    std::array<LayerTilesClue, NLAYERS> tiles; ///< Array of LayerTiles (2D layer of tiles) for each layer
     //make pointcloud
     pcloud.x = *ce_clean_x;
     pcloud.y = *ce_clean_y;
@@ -420,7 +420,7 @@ void Runclustering::EventLoop() {
     clusters_soa.load(clusters);
 
     // Compute clusters using CLUE3D [similar sequence as the 2D part, starting pointcloud here composed of the 2D clusters just made above]
-    std::array<LayerTiles, NLAYERS> tiles2d;
+    std::array<LayerTilesClue3D, NLAYERS> tiles2d;
     pcloud2d.x = clusters_soa.x ;
     pcloud2d.y = clusters_soa.y ;
     pcloud2d.z = clusters_soa.z ;

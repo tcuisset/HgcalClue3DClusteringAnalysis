@@ -50,7 +50,7 @@ inline float distance3d(PointsCloud &points, int i, int j) {
  * Note the way the distance is computed (ignoring layer completely in the calculation of distance) for computing rho
  * \param params CLUE3D params (used : dc, densitySiblingLayers, densityOnSameLayer, kernelDensityFactor)
 */
-void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &points, Clue3DAlgoParameters const& params) {
+void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all 2D clusters
   for (unsigned int i = 0; i < points.n; i++) {
     int clayer = points.layer[i]; ///< Layer of 2D cluster
@@ -64,8 +64,7 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &p
       if (!params.densityOnSameLayer && currentLayer == clayer)
         continue;
       
-      LayerTiles &lt = d_hist[currentLayer];
-      float dc_effective = currentLayer < 41 ? params.deltac[0] : params.deltac[1];
+      LayerTilesClue3D &lt = d_hist[currentLayer];
       // get search box (2D)
       std::array<int, 4> search_box = lt.searchBox(
 	     points.x[i] - dc_effective, points.x[i] + dc_effective,
@@ -106,7 +105,7 @@ void calculate_density3d(std::array<LayerTiles, NLAYERS> &d_hist, PointsCloud &p
  * Compute, for each 2D cluster, the distance to nearest higher (and set the ID of the nearest higher)
  * \param params CLUE3D parameters (used are : deltac, outlierDeltaFactor, densitySiblingLayers, nearestHigherOnSameLayer) 
 */
-void calculate_distanceToHigher3d(std::array<LayerTiles, NLAYERS> &d_hist,
+void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
                                 PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
