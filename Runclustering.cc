@@ -46,7 +46,7 @@ void dumpSoA(const PointsCloud & points) {
 std::vector<std::string> readFileList(const char* fileListPath)
 {
   std::vector<std::string> listOfFiles;
-  std::ifstream file("Read.txt");
+  std::ifstream file(fileListPath);
   if (!file.is_open()) {
     std::cerr << "** ERROR: Can't open '" << fileListPath << "' for input"
               << std::endl;
