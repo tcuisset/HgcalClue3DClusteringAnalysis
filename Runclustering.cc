@@ -127,7 +127,7 @@ struct Arg: public option::Arg
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
-  CLUE3D_DC, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
+  CLUE3D_DENSITY_XY_DISTANCE, CLUE3D_CRITICAL_XY_DISTANCE, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
     CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY, CLUE3D_DENSITY_SAME_LAYER, CLUE3D_KERNEL_DENSITY};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
@@ -147,7 +147,8 @@ const option::Descriptor usage[] =
  {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
  {CLUE_POSITION_DELTA_RHO2, 0, "", "clue-position-delta-rho2", Arg::RequiredFloat, "--clue-position-delta-rho2= \t CLUE2D max distance squared to look for cells away from highest energy cell when computing cluster position"},
  
- {CLUE3D_DC, 0, "", "clue3d-deltac", Arg::RequiredFloat, "--clue3d-deltac= \t CLUE3D critical distance parameter"},
+ {CLUE3D_DENSITY_XY_DISTANCE, 0, "", "clue3d-densityXYDistanceSqr", Arg::RequiredFloat, "--clue3d-densityXYDistanceSqr= \t CLUE3D distance squared (in cm^2) on the transverse plane to consider for local density"},
+ {CLUE3D_CRITICAL_XY_DISTANCE, 0, "", "clue3d-criticalXYDistance", Arg::RequiredFloat, "--clue3d-criticalXYDistance= \t CLUE3D Minimal distance in cm on the XY plane from nearestHigher to become a seed"},
  {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
  {CLUE3D_DENSITY_SIBLING_LAYERS, 0, "", "clue3d-density-sibling-layers", Arg::Numeric, "--clue3d-density-sibling-layers= \t CLUE3D density sibling layers parameters, define range of layers +- layer# to look for another 2D cluster"},
@@ -212,11 +213,16 @@ int main(int argc, char *argv[])
   cout << "Using CLUE parameters : " << clueParameters << endl;
 
   Clue3DAlgoParameters clue3DParameters;
-  if (options[CLUE3D_DC])
-    clue3DParameters.deltac = {std::stof(options[CLUE3D_DC].arg), -1.};
+  if (options[CLUE3D_DENSITY_XY_DISTANCE])
+    clue3DParameters.densityXYDistanceSqr = std::stof(options[CLUE3D_DENSITY_XY_DISTANCE].arg);
   else
-    clue3DParameters.deltac = {1.3f, 3.f * sqrt(2.f) + 0.1f};
+    clue3DParameters.densityXYDistanceSqr = 3.24f; // = 2.6 cm * 2.6 cm
   
+  if (options[CLUE3D_CRITICAL_XY_DISTANCE])
+    clue3DParameters.criticalXYDistance = std::stof(options[CLUE3D_CRITICAL_XY_DISTANCE].arg);
+  else
+    clue3DParameters.criticalXYDistance = 1.8f; //cm
+
   if (options[CLUE3D_CRITICAL_Z_DISTANCE])
     clue3DParameters.criticalZDistanceLyr = std::stoi(options[CLUE3D_CRITICAL_Z_DISTANCE].arg);
   else

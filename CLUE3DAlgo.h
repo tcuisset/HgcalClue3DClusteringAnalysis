@@ -11,7 +11,8 @@
 
 struct Clue3DAlgoParameters
 {
-    std::array<float, 2> deltac;  ///< Critical distance parameters, index 0 for HGCAL, index 1 for AHCAL (in (x; y) plane)
+    float densityXYDistanceSqr; ///< in cm^2, 2.6*2.6, distance squared on the transverse plane to consider for local density
+    float criticalXYDistance; ///< Minimal distance in cm on the XY plane from nearestHigher to become a seed
     int criticalZDistanceLyr;  ///< Minimal distance in layers along the Z axis from nearestHigher to become a seed
     std::array<float, 2> rhoc;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL
     float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
@@ -22,7 +23,8 @@ struct Clue3DAlgoParameters
     float criticalSelfDensity; ///< Minimum ratio of self_energy/local_density to become a seed. (roughly 1/(densitySiblingLayers+1) )
 
     friend std::ostream& operator<< (std::ostream& stream, const Clue3DAlgoParameters& p) {
-        stream << "deltac = " << p.deltac[0] 
+        stream << "densityXYDistanceSqr = " << p.densityXYDistanceSqr
+               << "criticalXYDistance = " << p.criticalXYDistance
                << ", criticalZDistanceLyr = " << p.criticalZDistanceLyr
                << ", rhoc = " << p.rhoc[0]
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
@@ -35,14 +37,26 @@ struct Clue3DAlgoParameters
     }
 };
 
+inline float square(float a) {
+  return a * a;
+}
+
 /**
- * Compute the distance between 2 points in PointsCloud in *2D* using (x;y) coordinates only (ignoring z completely)
- * *TODO* give a better name to this function
+ * Compute the distance squared between 2 points in PointsCloud, in x-y plane
 */
-inline float distance3d(PointsCloud &points, int i, int j) {
-    const float dx = points.x[i] - points.x[j];
-    const float dy = points.y[i] - points.y[j];
-    return std::sqrt(dx * dx + dy * dy);
+inline float distance3d_squared(PointsCloud &points, int i, int j) {
+  auto r = [&] (int k) -> float { // Compute r = sqrt(x^2 + y^2) (ie cylindrical coordinates)
+    return std::sqrt( square(points.x[k]) + square(points.y[k]));
+  };
+  /* This is the way it is done in CJLST. Given our z is different than CMS z, using it is probably not a good idea (esp when z=0)
+  Could probably be made to work by shifting z by the distance between detectir center and firts layer of HGCAL
+  return square(points.z[i]) * square( r(i)/std::abs(points.z[i]) + r(j)/std::abs(points.z[j]) )
+      + square(r(j))/square(points.z[j]) * square(std::atan2(points.y[j], points.x[j]) - std::atan2(points.y[i], points.x[i]));
+
+  */
+ /* Using transverse plane distance, probably a good approximation of the CMSSW way when considering a small subset of detector at high eta
+ */
+ return square(points.x[j] - points.x[i]) + square(points.y[j] - points.x[i]);
 }
 
 /**
@@ -65,6 +79,10 @@ void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCl
         continue;
       
       LayerTilesClue3D &lt = d_hist[currentLayer];
+      /*
+      In CMSSW the search is done in the next two eta-phi bins, so here we emulate this by looking into the next 2 x-y bins
+      */
+      float dc_effective = 2 * LayerTilesClue3D::TilesConstants::tileSize;
       // get search box (2D)
       std::array<int, 4> search_box = lt.searchBox(
 	     points.x[i] - dc_effective, points.x[i] + dc_effective,
@@ -87,10 +105,10 @@ void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCl
             //This computes the 2D distance between the 2D clusters in x,y (ignoring layer)
             //ie 2 2D clusters will have the same distance as long as they have same x,y wether they are on the same layer or 2 layers apart
             // *TODO* Is this intended ?
-            float dist_ij = distance3d(points, i, j);
+            float dist_ij = distance3d_squared(points, i, j);
             //    std::cout<<"dist_ij "<<dist_ij<<std::endl;
             
-            if (dist_ij <= dc_effective) {
+            if (dist_ij <= params.densityXYDistanceSqr) {
               // sum weights within N_{dc_effective}(i)
               points.rho[i] += (i == j ? 1.f : params.kernelDensityFactor) * points.weight[j];
             }
@@ -109,8 +127,6 @@ void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
                                 PointsCloud &points, Clue3DAlgoParameters const& params) {
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
-    float dc_effective = points.layer[i] < 41 ? params.deltac[0] : params.deltac[1];
-    float dm = params.outlierDeltaFactor * dc_effective;
     // default values of delta and nearest higher for i
     float delta_i = std::numeric_limits<float>::max();
     int nearestHigher_i = -1;
@@ -128,13 +144,23 @@ void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
       if (!params.nearestHigherOnSameLayer && (currentLayer == clayer))
         continue;
-      
-      // get search box (2D)
-      //      LayerTiles &lt = d_hist[points.layer[currentLayer]];
-      LayerTiles &lt = d_hist[currentLayer];
+      /*
+      The way CMSSW CLUE3D works i by considering on eta bin and one phi bin on either side of the current bin
+      and consider *all* layer clusters in these bins (there is no filtering on distance)
+      So here we emulate it by using x-y bins of size approximately equal to the size of a phi-eta bin in CMSSW
+      A computation in the front face of HGCAL around the middle of the radius gave 2.5 cm in eta-equivalent dimension,
+      and 5.4 cm in phi-equivalent dimension.
+      Therefore we approximate this by 3.7 cm * 3.7 cm square bins (to get approx the same area)
+
+      We still use searchBox for convenience as it handles edge cases properly
+      */
+      int xyBinWindow = 1;
+      float dm = xyBinWindow * LayerTilesClue3D::TilesConstants::tileSize;
+      LayerTilesClue3D &lt = d_hist[currentLayer];
       std::array<int, 4> search_box =
         lt.searchBox(xi - dm, xi + dm, yi - dm, yi + dm);
-      
+
+
       // loop over all bins in the search box
       for (int xBin = search_box[0]; xBin < search_box[1] + 1; ++xBin) {
         for (int yBin = search_box[2]; yBin < search_box[3] + 1; ++yBin) {
@@ -150,10 +176,14 @@ void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
             bool foundHigher = (points.rho[j] > rho_i);
             // in the rare case where rho is the same, use detid
             // foundHigher = foundHigher || ((points.rho[j] == rho_i) && (j > i));
-            float dist_ij = distance3d(points, i, j);
-            if (foundHigher && dist_ij <= dm) {  // definition of N'_{dm}(i)
+            float dist_ij = std::sqrt(distance3d_squared(points, i, j));
+
+            /* Important note : CMSSW CLUE and CLUE3D does not do the check dist_ij <= dm contrary to what standalone CLUE does
+            (at least as of March 2023)
+            */
+            if (foundHigher /* && dist_ij <= dm*/) { 
               // find the nearest point within N'_{dm}(i)
-              if (dist_ij < delta_i) {
+              if (dist_ij <= delta_i) {
                 // update delta_i and nearestHigher_i
                 delta_i = dist_ij;
                 nearestHigher_i = j;
@@ -181,7 +211,7 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
   std::vector<int> localStack;
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
-    float dc_effective = points.layer[i] < 41 ? params.deltac[0] : params.deltac[1];
+    float critical_transverse_distance = params.criticalXYDistance; //useAbsoluteProjectiveScale_ ? criticalXYDistance_ : criticalEtaPhiDistance_;
     float rhoc_effective = points.layer[i] < 41 ? params.rhoc[0] : params.rhoc[1];
     // initialize clusterIndex
     points.clusterIndex[i] = -1;
@@ -194,10 +224,10 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
         ? points.layer[i] : points.layer[points.nearestHigher[i]];
     }
     // determine seed or outlier
-    bool isSeed = (deltai > dc_effective || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
+    bool isSeed = (deltai > critical_transverse_distance || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
                   && (rhoi >= rhoc_effective)
                   && (points.weight[i] / rhoi > params.criticalSelfDensity);
-    bool isOutlier = (deltai > params.outlierDeltaFactor * dc_effective) && (rhoi < rhoc_effective);
+    bool isOutlier = (deltai > params.outlierDeltaFactor * critical_transverse_distance) && (rhoi < rhoc_effective);
     if (isSeed) {
       //std::cout<<"found seed"<<std::endl;  
     // set isSeed as 1
