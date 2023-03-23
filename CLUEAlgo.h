@@ -220,7 +220,8 @@ int findAndAssign_clusters(PointsCloud &points, float outlierDeltaFactor,
       localStack.push_back(i);
     } else if (!isOutlier) {
       // register as follower at its nearest higher
-      points.followers[points.nearestHigher[i]].push_back(i);
+      if (points.nearestHigher[i] >= 0) //Only register if it actually has a nearest higher
+        points.followers[points.nearestHigher[i]].push_back(i);
       points.pointType[i] = PointsCloud::FOLLOWER;
     } else {
       points.pointType[i] = PointsCloud::OUTLIER;
