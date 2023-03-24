@@ -77,9 +77,6 @@ void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCl
     minLayer = std::max(clayer - params.densitySiblingLayers, NLAYER1);
     maxLayer = std::min(clayer + params.densitySiblingLayers, maxLayer);
     for (int currentLayer = minLayer; currentLayer <= maxLayer; currentLayer++) {
-      if (!params.densityOnSameLayer && currentLayer == clayer)
-        continue;
-      
       LayerTilesClue3D &lt = d_hist[currentLayer];
       /*
       In CMSSW the search is done in the next two eta-phi bins, so here we emulate this by looking into the next 2 x-y bins
@@ -109,7 +106,11 @@ void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCl
             // *TODO* Is this intended ?
             float dist_ij = distance3d_squared(points, i, j);
             //    std::cout<<"dist_ij "<<dist_ij<<std::endl;
-            
+
+            if (i != j && !params.densityOnSameLayer && currentLayer == clayer) {
+              // if densityOnSameLayer is false, then ignore all layer clusters on the same layer, except when considering itself
+              continue;
+            }
             if (dist_ij <= params.densityXYDistanceSqr) {
               // sum weights within N_{dc_effective}(i)
               points.rho[i] += (i == j ? 1.f : params.kernelDensityFactor) * points.weight[j];
