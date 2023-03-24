@@ -69,28 +69,38 @@ struct PointsCloud {
 struct ClustersSoA {
   ClustersSoA() = default;
 
-  void inline load(const std::vector<Cluster>& clusters) {
-    auto total_clusters = clusters.size();
-    x.resize(total_clusters, 0.f);
-    y.resize(total_clusters, 0.f);
-    z.resize(total_clusters, 0.f);
-    energy.resize(total_clusters, 0.f);
-    layer.resize(total_clusters, 0);
-    size.resize(total_clusters, 0);
-    hitidxs.resize(total_clusters); 
+  /**
+   * \param filterMinClusterSize only load clusters whose size is greater or equal than filterMinClusterSize
+  */
+  void inline load(const std::vector<Cluster>& clusters, unsigned filterMinClusterSize=1) {
+    //auto total_clusters = clusters.size();
+    x.clear();
+    y.clear();
+    z.clear();
+    energy.clear();
+    layer.clear();
+    size.clear();
+    hitidxs.clear();
+    // x.reserve(total_clusters);
+    // y.reserve(total_clusters);
+    // z.reserve(total_clusters);
+    // energy.reserve(total_clusters);
+    // layer.reserve(total_clusters);
+    // size.reserve(total_clusters);
+    // hitidxs.reserve(total_clusters); 
 
-    int counter = 0;
     for (auto const & cl :  clusters) {
 //      const auto [cl_x, cl_y, cl_z] = cl.position();
-      auto cl_pos = cl.position();
-      x[counter] = std::get<0>(cl_pos);
-      y[counter] = std::get<1>(cl_pos);
-      z[counter] = std::get<2>(cl_pos);
-      energy[counter] = cl.energy();
-      layer[counter] = cl.layer();
-      size[counter] = cl.hits().size();
-      hitidxs[counter] = cl.hits();
-      counter++;
+      if (cl.hits().size() >= filterMinClusterSize) {
+        auto cl_pos = cl.position();
+        x.push_back(std::get<0>(cl_pos));
+        y.push_back(std::get<1>(cl_pos));
+        z.push_back(std::get<2>(cl_pos));
+        energy.push_back(cl.energy());
+        layer.push_back(cl.layer());
+        size.push_back(cl.hits().size());
+        hitidxs.push_back(cl.hits());
+      }
     }
   };
 

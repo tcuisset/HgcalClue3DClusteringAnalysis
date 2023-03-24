@@ -127,8 +127,7 @@ struct Arg: public option::Arg
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
-  CLUE3D_DENSITY_XY_DISTANCE, CLUE3D_CRITICAL_XY_DISTANCE, CLUE3D_RHOC, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
-    CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY, CLUE3D_DENSITY_SAME_LAYER, CLUE3D_KERNEL_DENSITY};
+    CLUE3D_MIN_CLUSTER_SIZE};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
 {// index type shortopt longopt check_arg help
@@ -273,6 +272,10 @@ int main(int argc, char *argv[])
 
   cout << endl;
 
+  int filterMinLayerClusterSize = 2; // From CMSSW : RecoHGCal/TICL/python/CLUE3DHighStep_cff.py
+  if (options[CLUE3D_MIN_CLUSTER_SIZE])
+    filterMinLayerClusterSize = std::stoul(options[CLUE3D_MIN_CLUSTER_SIZE].arg);
+
   // Dealing with input files
   if (parse.nonOptionsCount() > 0 && options[INPUT_FILE_LIST]) {
     cerr << "You cannot pass an input file list as a file at the same time as input files on the command line ! Aborting" << endl;
@@ -288,11 +291,14 @@ int main(int argc, char *argv[])
 
   Runclustering tbCLUS(std::move(listOfFilePaths), options[OUTPUT_FILE].arg, clueParameters, clue3DParameters,
     options[SHIFT_RECHITS].last()->type() == ENABLE);
-  tbCLUS.EventLoop();
+  tbCLUS.EventLoop(filterMinLayerClusterSize);
   return 0;
 }
 
-void Runclustering::EventLoop() {
+/**
+ * \param filterMinLayerClusterSize only consider for CLUE3D layer clusters whose size is greater or equal than filterMinLayerClusterSize
+*/
+void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
 
   bool NTUPLEOUT = false;
   if (fChain == 0) return;
@@ -324,6 +330,7 @@ void Runclustering::EventLoop() {
 
   // Create a SoA for the output clusters
   ClustersSoA clusters_soa;
+  ClustersSoA clusters_soa_filtered; ///< Same as clusters_soa bu tfilter on cluster size has been applied
   ClustersSoA clusters3d_soa;
 
   float Esum_allRecHits_inGeV;
@@ -425,17 +432,20 @@ void Runclustering::EventLoop() {
     // Fill in the clusters_SoA
     clusters_soa.load(clusters);
 
+    //Filter clusters for CLUE3D :
+    clusters_soa_filtered.load(clusters, filterMinLayerClusterSize);
+
     // Compute clusters using CLUE3D [similar sequence as the 2D part, starting pointcloud here composed of the 2D clusters just made above]
     std::array<LayerTilesClue3D, NLAYERS> tiles2d;
-    pcloud2d.x = clusters_soa.x ;
-    pcloud2d.y = clusters_soa.y ;
-    pcloud2d.z = clusters_soa.z ;
+    pcloud2d.x = clusters_soa_filtered.x ;
+    pcloud2d.y = clusters_soa_filtered.y ;
+    pcloud2d.z = clusters_soa_filtered.z ;
     vector<int> clusters_soao ; ///< Layer of each 2D cluster, indexed by cluster ID
-    clusters_soao = clusters_soa.layer;
-    std::vector<unsigned int> clusters_soau(std::begin(clusters_soao), std::end(clusters_soao));
+    clusters_soao = clusters_soa_filtered.layer;
+    std::vector<unsigned int> clusters_soau(std::begin(clusters_soao), std::end(clusters_soao)); // convert to unsigned int
     pcloud2d.layer = clusters_soau ;
-    pcloud2d.weight = clusters_soa.energy ;
-    pcloud2d.resizeOutputContainers(clusters_soa.x.size());
+    pcloud2d.weight = clusters_soa_filtered.energy ;
+    pcloud2d.resizeOutputContainers(clusters_soa_filtered.x.size());
 
     compute_histogram(tiles2d, pcloud2d);
 

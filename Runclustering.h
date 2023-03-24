@@ -39,7 +39,7 @@ class Runclustering : public TBNtupleAnalyzer {
                                               
   ~Runclustering();
   Long64_t LoadTree(Long64_t entry);
-  void EventLoop();  //, const char *,const char *);
+  void EventLoop(unsigned filterMinLayerClusterSize);
 
   std::vector<bool> *noise_flag;
   int event_count[7] = {};
