@@ -1,6 +1,6 @@
 CXX     = g++
 
-CXXFLAGS= $(shell root-config --cflags) -Wall -Wextra -g
+CXXFLAGS= $(shell root-config --cflags) -Wall -Wextra -O3
 LIBS    = $(shell root-config --libs) 
 
 SOURCES = TBNtupleAnalyzer.cc Runclustering.cc 
