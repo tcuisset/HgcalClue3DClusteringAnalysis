@@ -21,6 +21,7 @@ struct PointsCloud {
 
   ///< 
   void resizeOutputContainers(unsigned int const& nPoints) {
+    masked.resize(nPoints, 0);
     rho.resize(nPoints, 0.);
     delta.resize(nPoints, -1.);
     nearestHigher.resize(nPoints, -1);
@@ -36,6 +37,7 @@ struct PointsCloud {
     z.clear();
     layer.clear();
     weight.clear();
+    masked.clear();
     rho.clear();
     delta.clear();
     nearestHigher.clear();
@@ -50,6 +52,8 @@ struct PointsCloud {
   std::vector<float> z;
   std::vector<unsigned int> layer;
   std::vector<float> weight; ///< Weights of all points (ie energy)
+
+  std::vector<char> masked; ///< If 1, then point is masked (should be ignored). 0 otherwise
 
   // Output variables : vectors of size n
   std::vector<float> rho; ///< Local energy density
@@ -70,10 +74,10 @@ struct ClustersSoA {
   ClustersSoA() = default;
 
   /**
-   * \param filterMinClusterSize only load clusters whose size is greater or equal than filterMinClusterSize
+   * \param filterMinClusterSize mask clusters whose size is strictly less than filterMinClusterSize
   */
   void inline load(const std::vector<Cluster>& clusters, unsigned filterMinClusterSize=0) {
-    //auto total_clusters = clusters.size();
+    auto total_clusters = clusters.size();
     x.clear();
     y.clear();
     z.clear();
@@ -81,13 +85,15 @@ struct ClustersSoA {
     layer.clear();
     size.clear();
     hitidxs.clear();
-    // x.reserve(total_clusters);
-    // y.reserve(total_clusters);
-    // z.reserve(total_clusters);
-    // energy.reserve(total_clusters);
-    // layer.reserve(total_clusters);
-    // size.reserve(total_clusters);
-    // hitidxs.reserve(total_clusters); 
+    masked.clear();
+    x.reserve(total_clusters);
+    y.reserve(total_clusters);
+    z.reserve(total_clusters);
+    energy.reserve(total_clusters);
+    layer.reserve(total_clusters);
+    size.reserve(total_clusters);
+    hitidxs.reserve(total_clusters); 
+    masked.reserve(total_clusters);
 
     for (auto const & cl :  clusters) {
 //      const auto [cl_x, cl_y, cl_z] = cl.position();
@@ -100,6 +106,7 @@ struct ClustersSoA {
         layer.push_back(cl.layer());
         size.push_back(cl.hits().size());
         hitidxs.push_back(cl.hits());
+        masked.push_back(cl.hits().size() >= filterMinClusterSize ? 0 : 1);
       }
     }
   };
@@ -111,7 +118,7 @@ struct ClustersSoA {
   std::vector<int> layer;
   std::vector<int> size; ///< Number of hits per cluster
   std::vector<std::vector<int>> hitidxs; ///< List of hits IDs per cluster
-
+  std::vector<char> masked; ///< If 1 then cluster is masked
 
 };
 

@@ -101,6 +101,9 @@ void calculate_density3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist, PointsCl
             unsigned int j = lt[binId][binIter];
             // query N_{dc_effective}(i)
 
+            if (points.masked[j] == 1)
+              continue; // Skip masked layer cluster
+
             //This computes the 2D distance between the 2D clusters in x,y (ignoring layer)
             //ie 2 2D clusters will have the same distance as long as they have same x,y wether they are on the same layer or 2 layers apart
             // *TODO* Is this intended ?
@@ -175,6 +178,10 @@ void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
           // interate inside this bin
           for (int binIter = 0; binIter < binSize; binIter++) {
             unsigned int j = lt[binId][binIter];
+
+            if (points.masked[j] == 1)
+              continue; //Skip masked layer cluster
+
             // query N'_{dm}(i)
             bool foundHigher = (points.rho[j] > rho_i);
             // in the rare case where rho is the same, use detid
