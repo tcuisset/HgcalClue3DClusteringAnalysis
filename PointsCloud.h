@@ -72,7 +72,7 @@ struct ClustersSoA {
   /**
    * \param filterMinClusterSize only load clusters whose size is greater or equal than filterMinClusterSize
   */
-  void inline load(const std::vector<Cluster>& clusters, unsigned filterMinClusterSize=1) {
+  void inline load(const std::vector<Cluster>& clusters, unsigned filterMinClusterSize=0) {
     //auto total_clusters = clusters.size();
     x.clear();
     y.clear();
