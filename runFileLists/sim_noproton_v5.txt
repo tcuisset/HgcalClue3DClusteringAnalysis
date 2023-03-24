@@ -1,4 +1,3 @@
-/grid_mnt/data_cms_upgrade/cuisset/testbeam18$ find /grid_mnt/data_cms_upgrade/cuisset/testbeam18/ntuple-selection/v2 -type f -name "*sim_noproton_v5*"
 /grid_mnt/data_cms_upgrade/cuisset/testbeam18/ntuple-selection/v2/ntuple_selection_sim_noproton_v5_em_beamen100_2.root
 /grid_mnt/data_cms_upgrade/cuisset/testbeam18/ntuple-selection/v2/ntuple_selection_sim_noproton_v5_em_beamen120_0.root
 /grid_mnt/data_cms_upgrade/cuisset/testbeam18/ntuple-selection/v2/ntuple_selection_sim_noproton_v5_em_beamen200_4.root
