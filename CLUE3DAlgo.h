@@ -58,7 +58,7 @@ inline float distance3d_squared(PointsCloud &points, int i, int j) {
   */
  /* Using transverse plane distance, probably a good approximation of the CMSSW way when considering a small subset of detector at high eta
  */
- return square(points.x[j] - points.x[i]) + square(points.y[j] - points.x[i]);
+ return square(points.x[j] - points.x[i]) + square(points.y[j] - points.y[i]);
 }
 
 /**
