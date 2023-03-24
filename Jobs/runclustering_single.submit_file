@@ -1,7 +1,7 @@
 universe = vanilla
 
 executable = runclustering_job.sh
-arguments = $BASENAME(runList) $(outputFileName) $(clue3DParams)
+arguments = -f $BASENAME(runList) -o $(outputFileName) $(clueParams)
 
 environment = "ANALYSIS_DIR=$Ffp(runList)"
 
