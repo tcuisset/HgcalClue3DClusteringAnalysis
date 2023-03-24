@@ -229,8 +229,9 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
     float rhoi = points.rho[i];
     int distanceInLayersToNearestHigher = -1;
     if (points.nearestHigher[i] >= 0) {
+      // Absolute difference for unsigned int
       distanceInLayersToNearestHigher = points.layer[i] > points.layer[points.nearestHigher[i]]
-        ? points.layer[i] : points.layer[points.nearestHigher[i]];
+        ? points.layer[i] - points.layer[points.nearestHigher[i]] : points.layer[points.nearestHigher[i]] - points.layer[i];
     }
     // determine seed or outlier
     bool isSeed = (deltai > critical_transverse_distance || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
