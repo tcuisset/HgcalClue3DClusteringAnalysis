@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 
-#define NLAYERS 100
+#define NLAYERS 50
 
 static constexpr int32_t my_ceil(float num) {
 return (static_cast<float>(static_cast<int32_t>(num)) == num)
@@ -13,10 +13,10 @@ return (static_cast<float>(static_cast<int32_t>(num)) == num)
 }
 
 struct LayerTilesConstantsClue {
-  static constexpr float minX = -250.f;
-  static constexpr float maxX = 250.f;
-  static constexpr float minY = -250.f;
-  static constexpr float maxY = 250.f;
+  static constexpr float minX = -10.f;
+  static constexpr float maxX = 10.f;
+  static constexpr float minY = -10.f;
+  static constexpr float maxY = 10.f;
 
   static constexpr float tileSize = 5.f; ///< Copied from CMSSW (has to be the same, this has physical consequences in findNearestHigher)
   static constexpr int nColumns = my_ceil((maxX - minX) / tileSize);
@@ -29,10 +29,10 @@ struct LayerTilesConstantsClue {
 
 
 struct LayerTilesConstantsClue3D {
-  static constexpr float minX = -250.f;
-  static constexpr float maxX = 250.f;
-  static constexpr float minY = -250.f;
-  static constexpr float maxY = 250.f;
+  static constexpr float minX = -10.f;
+  static constexpr float maxX = 10.f;
+  static constexpr float minY = -10.f;
+  static constexpr float maxY = 10.f;
   /**
    * The tile size is important in calculate_distanceToHigher in both CLUE and CLUE3D
    * This value was chosen so that our square x-y bins have approximately the same area as eta-phi bins in CLUE3D
