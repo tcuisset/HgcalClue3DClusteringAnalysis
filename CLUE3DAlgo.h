@@ -14,7 +14,7 @@ struct Clue3DAlgoParameters
     float densityXYDistanceSqr; ///< in cm^2, 2.6*2.6, distance squared on the transverse plane to consider for local density
     float criticalXYDistance; ///< Minimal distance in cm on the XY plane from nearestHigher to become a seed
     int criticalZDistanceLyr;  ///< Minimal distance in layers along the Z axis from nearestHigher to become a seed
-    std::array<float, 2> rhoc;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL
+    float criticalDensity;  ///< Critical density parameters, index 0 for HGCAL, index 1 for AHCAL (called criticalDensity in CMSSW)
     float outlierDeltaFactor; ///< multiplicative factor to deltac to get distance to search for nearest higher
     int densitySiblingLayers; ///< define range of layers +- layer# of a point  
     bool densityOnSameLayer;  ///< Consider layer clusters on the same layer when computing local energy density
@@ -26,7 +26,7 @@ struct Clue3DAlgoParameters
         stream << "densityXYDistanceSqr = " << p.densityXYDistanceSqr
                << ", criticalXYDistance = " << p.criticalXYDistance
                << ", criticalZDistanceLyr = " << p.criticalZDistanceLyr
-               << ", rhoc = " << p.rhoc[0]
+               << ", criticalDensity = " << p.criticalDensity
                << ", outlierDeltaFactor = " << p.outlierDeltaFactor 
                << ", densitySiblingLayers = " << p.densitySiblingLayers
                << ", densityOnSameLayer = " << p.densityOnSameLayer
@@ -45,9 +45,11 @@ inline float square(float a) {
  * Compute the distance squared between 2 points in PointsCloud, in x-y plane
 */
 inline float distance3d_squared(PointsCloud &points, int i, int j) {
+  /*
   auto r = [&] (int k) -> float { // Compute r = sqrt(x^2 + y^2) (ie cylindrical coordinates)
     return std::sqrt( square(points.x[k]) + square(points.y[k]));
   };
+  */
   /* This is the way it is done in CJLST. Given our z is different than CMS z, using it is probably not a good idea (esp when z=0)
   Could probably be made to work by shifting z by the distance between detectir center and firts layer of HGCAL
   return square(points.z[i]) * square( r(i)/std::abs(points.z[i]) + r(j)/std::abs(points.z[j]) )
@@ -201,7 +203,7 @@ void calculate_distanceToHigher3d(std::array<LayerTilesClue3D, NLAYERS> &d_hist,
 /**
  * For all 2D clusters, compute whether it is a seed, outlier, or follower (in this case register to the nearest higher)
  * Then expand clusters from seeds (setting point.clusterIndex for all points in each cluster)
- * \param params Clue3D parameters (used are deltac, outlierDeltaFactor, rhoc and criticalZDistanceLyr)
+ * \param params Clue3D parameters (used are deltac, outlierDeltaFactor, criticalDensity and criticalZDistanceLyr)
  * \return number of 3D clusters created
 */
 int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& params) {
@@ -212,7 +214,6 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
   // loop over all points
   for (unsigned int i = 0; i < points.n; i++) {
     float critical_transverse_distance = params.criticalXYDistance; //useAbsoluteProjectiveScale_ ? criticalXYDistance_ : criticalEtaPhiDistance_;
-    float rhoc_effective = points.layer[i] < 41 ? params.rhoc[0] : params.rhoc[1];
     // initialize clusterIndex
     points.clusterIndex[i] = -1;
 
@@ -225,9 +226,9 @@ int findAndAssign_clusters3d(PointsCloud &points, Clue3DAlgoParameters const& pa
     }
     // determine seed or outlier
     bool isSeed = (deltai > critical_transverse_distance || distanceInLayersToNearestHigher > params.criticalZDistanceLyr) 
-                  && (rhoi >= rhoc_effective)
+                  && (rhoi >= params.criticalDensity)
                   && (points.weight[i] / rhoi > params.criticalSelfDensity);
-    bool isOutlier = (deltai > params.outlierDeltaFactor * critical_transverse_distance) && (rhoi < rhoc_effective);
+    bool isOutlier = (deltai > params.outlierDeltaFactor * critical_transverse_distance) && (rhoi < params.criticalDensity);
     if (isSeed) {
       //std::cout<<"found seed"<<std::endl;  
     // set isSeed as 1

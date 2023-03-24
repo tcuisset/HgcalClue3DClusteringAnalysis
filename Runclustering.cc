@@ -127,6 +127,8 @@ struct Arg: public option::Arg
 
 enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
+  CLUE3D_DENSITY_XY_DISTANCE, CLUE3D_CRITICAL_XY_DISTANCE, CLUE3D_CRITICAL_DENSITY, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
+    CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY, CLUE3D_DENSITY_SAME_LAYER, CLUE3D_KERNEL_DENSITY,
     CLUE3D_MIN_CLUSTER_SIZE};
 enum optionToggle { ENABLE, DISABLE};
 const option::Descriptor usage[] =
@@ -148,7 +150,7 @@ const option::Descriptor usage[] =
  
  {CLUE3D_DENSITY_XY_DISTANCE, 0, "", "clue3d-densityXYDistanceSqr", Arg::RequiredFloat, "--clue3d-densityXYDistanceSqr= \t CLUE3D distance squared (in cm^2) on the transverse plane to consider for local density"},
  {CLUE3D_CRITICAL_XY_DISTANCE, 0, "", "clue3d-criticalXYDistance", Arg::RequiredFloat, "--clue3d-criticalXYDistance= \t CLUE3D Minimal distance in cm on the XY plane from nearestHigher to become a seed"},
- {CLUE3D_RHOC, 0, "", "clue3d-rhoc", Arg::RequiredFloat, "--clue3d-rhoc= \t CLUE3D critical density parameter"},
+ {CLUE3D_CRITICAL_DENSITY, 0, "", "clue3d-criticalDensity", Arg::RequiredFloat, "--clue3d-criticalDensity= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
  {CLUE3D_DENSITY_SIBLING_LAYERS, 0, "", "clue3d-density-sibling-layers", Arg::Numeric, "--clue3d-density-sibling-layers= \t CLUE3D density sibling layers parameters, define range of layers +- layer# to look for another 2D cluster"},
  {CLUE3D_DENSITY_SAME_LAYER, ENABLE, "", "densityOnSameLayer", Arg::None, "--densityOnSameLayer \t CLUE3D : Consider layer clusters on the same layer when computing local energy density"},
@@ -158,6 +160,9 @@ const option::Descriptor usage[] =
  {CLUE3D_CRITICAL_Z_DISTANCE, 0, "", "clue3d-criticalZDistanceLyr", Arg::Numeric, "--clue3d-criticalZDistanceLyr= \t CLUE3D Minimal distance in layers along the Z axis from nearestHigher to become a seed"},
  {CLUE3D_CRITICAL_SELF_DENSITY, 0, "", "clue3d-criticalSelfDensity", Arg::RequiredFloat, "--clue3d-criticalSelfDensity= \t CLUE3D Minimum ratio of self_energy/local_density to become a seed."},
  {CLUE3D_KERNEL_DENSITY, 0, "", "clue3d-kernelDensityFactor", Arg::RequiredFloat, "--clue3d-kernelDensityFactor= \t CLUE3D Kernel factor to be applied to other layer clusters while computing the local density"},
+
+ // This is not a parameter for CLUE3D itself, but a replication of the filtering of layer clusters in CMSSW before running CLUE3D
+ {CLUE3D_MIN_CLUSTER_SIZE, 0, "", "clue3d-minLayerClusterSize", Arg::Numeric, "--clue3d-minLayerClusterSize= \t CLUE3D : Minimum size of layer clusters to consider (inclusive)"},
 
  {UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExamples:\n"
                                             "  ./runclustering -f files-single.txt -o ./CLUE_clusters.root\n"
@@ -191,13 +196,22 @@ int main(int argc, char *argv[])
   if (options[CLUE_DC])
     clueParameters.deltac = {std::stof(options[CLUE_DC].arg), -1.};
   else
-    clueParameters.deltac = {1.3f, 3.f * sqrt(2.f) + 0.1f};
+    clueParameters.deltac = {1.3f, 3.f * sqrt(2.f) + 0.1f}; // (cm) No idea where AHCAL value comes from (CE-E value is from CMSSW)
   
   constexpr float MIP2GeV[3] = {0.0105, 0.0812, 0.12508};
   if (options[CLUE_RHOC])
     clueParameters.rhoc = {std::stof(options[CLUE_RHOC].arg), -1.};
-  else
-    clueParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+  else {
+    /* In test beam : 1 sigma noise is ~ 5 to 7 ADC HG counts
+    From DN19-019, figure 3, 4000 HG ADC counts is 100 MIPs
+    so with kappa=9, 9 sigma noise is 9sigma * 6 ADC counst *  100 MIP / 4000 ADC  = 1.35 MIPs
+    (about 13 MeV)
+    (values for AHCAL were just copied over from CE-E)
+    */
+    clueParameters.rhoc = {1.35f * MIP2GeV[0], 1.35f * MIP2GeV[2]};
+    // Old values : 
+    //clueParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+  }
   
   if (options[CLUE_OUTLIER_DELTA_FACTOR])
     clueParameters.outlierDeltaFactor = std::stof(options[CLUE_OUTLIER_DELTA_FACTOR].arg);
@@ -215,52 +229,52 @@ int main(int argc, char *argv[])
   if (options[CLUE3D_DENSITY_XY_DISTANCE])
     clue3DParameters.densityXYDistanceSqr = std::stof(options[CLUE3D_DENSITY_XY_DISTANCE].arg);
   else
-    clue3DParameters.densityXYDistanceSqr = 3.24f; // = 2.6 cm * 2.6 cm
+    clue3DParameters.densityXYDistanceSqr = 3.24f; // = 2.6 cm * 2.6 cm, copied from CMSSW
   
   if (options[CLUE3D_CRITICAL_XY_DISTANCE])
     clue3DParameters.criticalXYDistance = std::stof(options[CLUE3D_CRITICAL_XY_DISTANCE].arg);
   else
-    clue3DParameters.criticalXYDistance = 1.8f; //cm
+    clue3DParameters.criticalXYDistance = 1.8f; //cm, copied from CMSSW
 
   if (options[CLUE3D_CRITICAL_Z_DISTANCE])
     clue3DParameters.criticalZDistanceLyr = std::stoi(options[CLUE3D_CRITICAL_Z_DISTANCE].arg);
   else
-    clue3DParameters.criticalZDistanceLyr = 5;
+    clue3DParameters.criticalZDistanceLyr = 5; //Layer count, copied from CMSSW
   
-  if (options[CLUE3D_RHOC])
-    clue3DParameters.rhoc = {std::stof(options[CLUE3D_RHOC].arg), -1.};
+  if (options[CLUE3D_CRITICAL_DENSITY])
+    clue3DParameters.criticalDensity = std::stof(options[CLUE3D_CRITICAL_DENSITY].arg);
   else
-    clue3DParameters.rhoc = {4.f * MIP2GeV[0], 4.f * MIP2GeV[2]};
+    clue3DParameters.criticalDensity = 0.6f; // From CMSSW RecoHGCal/TICL/python/CLUE3DHighStep_cff.py
   
   if (options[CLUE3D_OUTLIER_DELTA_FACTOR])
     clue3DParameters.outlierDeltaFactor = std::stof(options[CLUE3D_OUTLIER_DELTA_FACTOR].arg);
   else
-    clue3DParameters.outlierDeltaFactor = 2.f;
+    clue3DParameters.outlierDeltaFactor = 2.f; // from CMSSW (called outlierMultiplier there)
 
   if (options[CLUE3D_DENSITY_SIBLING_LAYERS]) {
     clue3DParameters.densitySiblingLayers = std::stoi(options[CLUE3D_DENSITY_SIBLING_LAYERS].arg, nullptr, 10);
   } else
-    clue3DParameters.densitySiblingLayers = 2;
+    clue3DParameters.densitySiblingLayers = 3; // from CMSSW
   
   if (options[CLUE3D_DENSITY_SAME_LAYER])
     clue3DParameters.densityOnSameLayer = options[CLUE3D_DENSITY_SAME_LAYER].last()->type() == ENABLE;
   else
-    clue3DParameters.densityOnSameLayer = false;
+    clue3DParameters.densityOnSameLayer = false; // from CMSSW
 
   if (options[CLUE3D_NEAREST_HIGHER_SAME_LAYER])
     clue3DParameters.nearestHigherOnSameLayer = options[CLUE3D_NEAREST_HIGHER_SAME_LAYER].last()->type() == ENABLE;
   else
-    clue3DParameters.nearestHigherOnSameLayer = false;
+    clue3DParameters.nearestHigherOnSameLayer = false; // from CMSSW
   
   if (options[CLUE3D_CRITICAL_SELF_DENSITY])
     clue3DParameters.criticalSelfDensity = std::stof(options[CLUE3D_CRITICAL_SELF_DENSITY].arg);
   else
-    clue3DParameters.criticalSelfDensity = 0.15f;
+    clue3DParameters.criticalSelfDensity = 0.15f; // from CMSSW
   
   if (options[CLUE3D_KERNEL_DENSITY])
     clue3DParameters.kernelDensityFactor = std::stof(options[CLUE3D_KERNEL_DENSITY].arg);
   else
-    clue3DParameters.kernelDensityFactor = 0.2f;
+    clue3DParameters.kernelDensityFactor = 0.2f; // from CMSSW
   
   cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
 
