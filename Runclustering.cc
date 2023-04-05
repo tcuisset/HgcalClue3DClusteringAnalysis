@@ -87,7 +87,21 @@ struct Arg: public option::Arg
  
     if (msg) printError("Option '", option, "' requires an argument\n");
     return option::ARG_ILLEGAL;
-  }*/
+  }
+*/
+  static option::ArgStatus RequiredDatatype(const option::Option& option, bool msg)
+  {
+    if (option.arg != 0) {
+      std::string arg_str(option.arg);
+      if (arg_str == "data" || arg_str == "simulation")
+        return option::ARG_OK;
+      else if (msg)
+        printError("Option '", option, "' allows as arguments one of : data, simulation\n");
+      return option::ARG_ILLEGAL;
+    }
+    if (msg) printError("Option '", option, "' requires an argument\n");
+    return option::ARG_ILLEGAL;
+  }
  
   static option::ArgStatus NonEmpty(const option::Option& option, bool msg)
   {
@@ -125,7 +139,7 @@ struct Arg: public option::Arg
 };
 
 
-enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, SHIFT_RECHITS,
+enum  optionIndex { UNKNOWN, HELP, OUTPUT_FILE, INPUT_FILE_LIST, DATATYPE, SHIFT_RECHITS, FILTER_DWC,
   CLUE_DC, CLUE_RHOC, CLUE_OUTLIER_DELTA_FACTOR, CLUE_POSITION_DELTA_RHO2,
   CLUE3D_DENSITY_XY_DISTANCE, CLUE3D_CRITICAL_XY_DISTANCE, CLUE3D_CRITICAL_DENSITY, CLUE3D_OUTLIER_DELTA_FACTOR, CLUE3D_DENSITY_SIBLING_LAYERS, CLUE3D_NEAREST_HIGHER_SAME_LAYER, 
     CLUE3D_CRITICAL_Z_DISTANCE, CLUE3D_CRITICAL_SELF_DENSITY, CLUE3D_DENSITY_SAME_LAYER, CLUE3D_KERNEL_DENSITY,
@@ -140,15 +154,18 @@ const option::Descriptor usage[] =
  {OUTPUT_FILE, 0,"o", "output-file",Arg::NonEmpty, "-o, --output-file=  \tLocation of output file" },
  {INPUT_FILE_LIST, 0, "f", "input-file-list", Arg::NonEmpty, "-f, --input-file-list= \t Path to a file holding the paths of all the input files to read"},
  
- {SHIFT_RECHITS, ENABLE, "", "shift-rechits", Arg::None, "--shift-rechits : use ce_clean_x_shifted and impactX_unshifted columns (suitable for data)."},
- {SHIFT_RECHITS, DISABLE, "", "no-shift-rechits", Arg::None, "--no-shift-rechits :  use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo)"},
+ {DATATYPE, 0, "", "datatype", Arg::RequiredDatatype, "--datatype : specify data or simulation (used for DWC filtering)"},
+ {SHIFT_RECHITS, ENABLE, "", "shift-rechits", Arg::None, "--shift-rechits : use ce_clean_x_shifted and impactX_unshifted columns (suitable for data). (auto-set if datatype=data)"},
+ {SHIFT_RECHITS, DISABLE, "", "no-shift-rechits", Arg::None, "--no-shift-rechits :  use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo) (auto-set if datatype=simulation)"},
+ {FILTER_DWC, ENABLE, "", "filter-dwc", Arg::None, "--filter-dwc : Filter events passing DWC cuts (Track Chisquare and 2x2cm impact position)"},
+ {FILTER_DWC, DISABLE, "", "no-filter-dwc", Arg::None, "--no-filter-dwc : Do not filter events passing DWC cuts (Track Chisquare and 2x2cm impact position)"},
  
  {CLUE_DC, 0, "", "clue-deltac", Arg::RequiredFloat, "--clue-deltac= \t CLUE2D critical distance parameter"},
  {CLUE_RHOC, 0, "", "clue-rhoc", Arg::RequiredFloat, "--clue-rhoc= \t CLUE2D critical density parameter"},
  {CLUE_OUTLIER_DELTA_FACTOR, 0, "", "clue-outlier-factor", Arg::RequiredFloat, "--clue-outlier-factor= \t CLUE2D outlier delta factor"},
  {CLUE_POSITION_DELTA_RHO2, 0, "", "clue-position-delta-rho2", Arg::RequiredFloat, "--clue-position-delta-rho2= \t CLUE2D max distance squared to look for cells away from highest energy cell when computing cluster position"},
  
- {CLUE3D_DENSITY_XY_DISTANCE, 0, "", "clue3d-densityXYDistanceSqr", Arg::RequiredFloat, "--clue3d-densityXYDistanceSqr= \t CLUE3D distance squared (in cm^2) on the transverse plane to consider for local density"},
+ {CLUE3D_DENSITY_XY_DISTANCE, 0, "", "clue3d-densityXYDistaeeceSqr", Arg::RequiredFloat, "--clue3d-densityXYDistanceSqr= \t CLUE3D distance squared (in cm^2) on the transverse plane to consider for local density"},
  {CLUE3D_CRITICAL_XY_DISTANCE, 0, "", "clue3d-criticalXYDistance", Arg::RequiredFloat, "--clue3d-criticalXYDistance= \t CLUE3D Minimal distance in cm on the XY plane from nearestHigher to become a seed"},
  {CLUE3D_CRITICAL_DENSITY, 0, "", "clue3d-criticalDensity", Arg::RequiredFloat, "--clue3d-criticalDensity= \t CLUE3D critical density parameter"},
  {CLUE3D_OUTLIER_DELTA_FACTOR, 0, "", "clue3d-outlier-factor", Arg::RequiredFloat, "--clue3d-outlier-factor= \t CLUE3D outlier delta factor"},
@@ -186,11 +203,13 @@ int main(int argc, char *argv[])
     option::printUsage(std::cout, usage);
     return 0;
   }
-  if (!options[SHIFT_RECHITS]) {
-    cerr << "Either --shift-rechits or --no-shift-rechits must be specified" << endl;
+  if (!options[FILTER_DWC]) {
+    cerr << "Either --filter-dwc or --no-filter-dwc must be specified" << endl;
     option::printUsage(std::cout, usage);
     return 1;
   }
+
+  cout << "Datatype : " << options[DATATYPE].arg << endl;
 
   ClueAlgoParameters clueParameters;
   if (options[CLUE_DC])
@@ -279,10 +298,23 @@ int main(int argc, char *argv[])
   cout << "Using CLUE3D parameters : " << clue3DParameters << endl;
 
   // Shifting rechits
-  if (options[SHIFT_RECHITS].last()->type() == ENABLE)
+  std::string datatype(options[DATATYPE].arg);
+  bool shiftRechits;
+  if (options[SHIFT_RECHITS]) {
+    shiftRechits = (options[SHIFT_RECHITS].last()->type() == ENABLE);
+  }
+  else {
+    shiftRechits = (datatype == "data");
+  }
+  if (shiftRechits)
     cout << "Shifting rechits positions (suitable for data only)" << endl;
   else
     cout << "Not shifting rechits positions (suitable for simulation only)" << endl;
+  
+  if (options[FILTER_DWC].last()->type() == ENABLE)
+    cout << "Filtering events passing DWC cuts (Track Chisquare and 2x2cm impact position)" << endl;
+  else
+    cout << "Not filtering events passing DWC cuts (Track Chisquare and 2x2cm impact position)" << endl;
 
   cout << endl;
 
@@ -304,7 +336,7 @@ int main(int argc, char *argv[])
   }
 
   Runclustering tbCLUS(std::move(listOfFilePaths), options[OUTPUT_FILE].arg, clueParameters, clue3DParameters,
-    options[SHIFT_RECHITS].last()->type() == ENABLE);
+    datatype, shiftRechits, options[FILTER_DWC].last()->type() == ENABLE);
   tbCLUS.EventLoop(filterMinLayerClusterSize);
   return 0;
 }
@@ -337,6 +369,8 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   TFile *f = output_file_;
   TTree clusters_tree("clusters", "clusters");
 
+  bool DWC_passes_cuts = 0;
+
   // Create a unique PointsCloud object and (re)-use it to fill the output
   // ntuple.
   PointsCloud pcloud; ///< PointsCloud of all hits per event (3D)
@@ -361,10 +395,7 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   // Delay wire chambers data
   clusters_tree.Branch("impactX", &impactX); //These are vector<float> of size 40 (nb of layers)
   clusters_tree.Branch("impactY", &impactY);
-  clusters_tree.Branch("DWC_b_x", &DWC_b_x);
-  clusters_tree.Branch("DWC_b_y", &DWC_b_y);
-  clusters_tree.Branch("DWC_trackChi2_X", &DWC_trackChi2_X);
-  clusters_tree.Branch("DWC_trackChi2_Y", &DWC_trackChi2_Y);
+  clusters_tree.Branch("DWC_passes_cuts", &DWC_passes_cuts); // If true, event DWC value passes cuts
 
   clusters_tree.Branch("rechits_x", &pcloud.x);
   clusters_tree.Branch("rechits_y", &pcloud.y);
@@ -414,7 +445,26 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
     }
     nb = fChain->GetEntry(jentry);
 
-    // rescaling energy from MeV to GeV
+    // ---- Delay Wire Chamber filtering
+    DWC_passes_cuts = DWC_trackChi2_X < 10 && DWC_trackChi2_Y < 10;
+    /* These selection values were taken from Matteo Bonanomi's code (personal communication, as the version on GitHub is older and outdated ?)
+    the b_x and b_y branches were never changed in previous steps so no need to mirror/unmirror 
+    */
+    if (datatype == "data") {
+      DWC_passes_cuts = DWC_passes_cuts && (std::abs(DWC_b_x + 2.7)<1.) && (std::abs(DWC_b_y - 1.)<1.);
+    } else if (datatype == "simulation") {
+      float xcorr = - 3.6 + 2.7; //x MC
+      float ycorr = + 2.6 - 1.0 ; //y MC
+      // Note the minus sign
+      DWC_passes_cuts = DWC_passes_cuts && (std::abs(-DWC_b_x + xcorr)<1.) && (std::abs(-DWC_b_y + ycorr)<1.);
+    } else {
+      assert(false && "datatype should be either data or simulation");
+    }
+
+    if (filterDwc && !DWC_passes_cuts)
+      continue;
+
+    // ----- rescaling energy from MeV to GeV
     vector<float> scaled_energy;
     scaled_energy = *ce_clean_energy_MeV;
     double en_scale{0.001};

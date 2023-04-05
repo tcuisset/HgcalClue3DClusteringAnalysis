@@ -29,12 +29,14 @@ class Runclustering : public TBNtupleAnalyzer {
  public:
   /**
    * \param listOfFilePaths list of paths to files holding trees to load
-   * \param energy not used (set in EventLoop)
+   * \param datatype can be either data or simulation, used for DWC cuts
+   * \param shiftRechits use ce_clean_x_shifted and impactX_unshifted columns (suitable for data) if true, use ce_clean_x_unshifted and impactX_unshifted columns (suitable only for Monte Carlo) if false
+   * \param filterDwc if true, filter events base on Delay Wire Chamber cuts
   */
   Runclustering(std::vector<std::string> listOfFilePaths,
                   const char *outFileName,
                   ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams,
-                  bool shiftRechits
+                  std::string datatype, bool shiftRechits, bool filterDwc
                  ); 
                                               
   ~Runclustering();
@@ -44,6 +46,9 @@ class Runclustering : public TBNtupleAnalyzer {
   std::vector<bool> *noise_flag;
   int event_count[7] = {};
   int count = 0, count_afterCuts = 0;
+
+  std::string datatype;
+  bool filterDwc;
   
   TFile* output_file_;
   TH1F *h_beamenergy;
@@ -61,8 +66,8 @@ class Runclustering : public TBNtupleAnalyzer {
 
 Runclustering::Runclustering(
     std::vector<std::string> listOfFilePaths, const char *outFileName,
-    ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams, bool shiftRechits) 
-    : clueParams_(clueParams), clue3DParams_(clue3DParams), currentNtupleNumber(-1) { 
+    ClueAlgoParameters clueParams, Clue3DAlgoParameters clue3DParams, std::string datatype, bool shiftRechits, bool filterDwc) 
+    : clueParams_(clueParams), clue3DParams_(clue3DParams), datatype(datatype), filterDwc(filterDwc), currentNtupleNumber(-1) { 
   
   TChain *tree = new TChain("relevant_branches");
   for (std::string path : listOfFilePaths) {

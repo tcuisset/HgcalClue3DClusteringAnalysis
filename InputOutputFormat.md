@@ -28,7 +28,7 @@ For data only :
 * impactX_unshifted -> impact values, without any shift, to compare against ce_clean_x_shifted
 
 ## DWC information (see <https://gitlab.cern.ch/cms-hgcal-tb/TestBeam/-/wikis/samples/ntuples-description>)
- * DWC_b_x and DWC_b_y : track offsets = impact onto EE to make cuts on events where beam is too far of center of DWC and detector
+ * DWC_b_x and DWC_b_y : track offsets = impact onto EE to make cuts on events where beam is too far of center of DWC and detector (these are taken without any correction from the original ntuples, so they might be mirrored in data)
  * DWC_trackChi2_X and DWC_trackChi2_Y : chi2 of extrapolated tracks, straight line model
 
 # Format of output
@@ -37,7 +37,7 @@ one TTree name clusters
 beamEnergy : float
 NRechits : uint
 impactX, impactY : vector<float> of length 40 (nb of layers). Cuurently it is always unshifted
-DWC_b_x, DWC_trackChi2_X, .. : same as input
+DWC_passes_cuts : bool : whether the event passes DWC cuts (always true if --filter-dwc was passed to runclustering, since events that fail cuts were discarded from dataset)
 
 rechits_* -> PointsCloud (vector branch) :
   std::vector<float> x;  // Whether it is shifted or not depends on --shift-rechits command line parameter
