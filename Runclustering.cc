@@ -404,6 +404,7 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   clusters_tree.Branch("rechits_layer", &pcloud.layer);
   clusters_tree.Branch("rechits_rho", &pcloud.rho);
   clusters_tree.Branch("rechits_delta", &pcloud.delta);
+  clusters_tree.Branch("rechits_nearestHigher", &pcloud.nearestHigher);
   clusters_tree.Branch("rechits_pointType", &pcloud.pointType);
 
   clusters_tree.Branch("clus2D_x", &clusters_soa.x);
@@ -415,6 +416,7 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   clusters_tree.Branch("clus2D_idxs", &clusters_soa.hitidxs);
   clusters_tree.Branch("clus2D_rho", &pcloud2d.rho);
   clusters_tree.Branch("clus2D_delta", &pcloud2d.delta);
+  clusters_tree.Branch("clus2D_nearestHigher", &pcloud2d.nearestHigher);
   clusters_tree.Branch("clus2D_pointType", &pcloud2d.pointType);
 
   clusters_tree.Branch("clus3D_x", &clusters3d_soa.x);
