@@ -277,7 +277,7 @@ void calculatePosition(const PointsCloud & points, Cluster & cl, float positionD
   float y_log = 0.f;
   for (auto i : cl.hits()) {
 //    //for silicon only just use 1+6 cells = 1.3cm for all thicknesses
-    if (::distance(points, i, maxEnergyIndex) > positionDeltaRho2) // use ::distance to avoid colliding with std::distance
+    if (::distance(points, i, maxEnergyIndex) > std::sqrt(positionDeltaRho2)) // use ::distance to avoid colliding with std::distance
       continue;
     float rhEnergy = points.weight[i];
     float Wi = std::fmax(thresholdW0 + std::log(rhEnergy / total_weight), 0.);
