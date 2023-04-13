@@ -367,6 +367,9 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   Long64_t jentry;
   
   TFile *f = output_file_;
+  output_file_->WriteObject<ClueAlgoParameters>(&clueParams_, "clueParams");
+  output_file_->WriteObject<Clue3DAlgoParameters>(&clue3DParams_, "clue3DParams");
+
   TTree clusters_tree("clusters", "clusters");
 
   bool DWC_passes_cuts = 0;
@@ -386,7 +389,8 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   // Create the branches in the output ntuple.
   clusters_tree.Branch("beamEnergy", &beamEnergy);
   clusters_tree.Branch("ntupleNumber", &currentNtupleNumber);
-  clusters_tree.Branch("NRechits", &NRechits);
+  clusters_tree.Branch("event", &event);
+  //clusters_tree.Branch("NRechits", &NRechits);
 
   if (fChain->GetBranch("trueBeamEnergy")) { //If branch exists in input dataset, copy it to output
     clusters_tree.Branch("trueBeamEnergy", &trueBeamEnergy);

@@ -3,13 +3,16 @@ CXX     = g++
 CXXFLAGS= $(shell root-config --cflags) -Wall -Wextra -O3
 LIBS    = $(shell root-config --libs) 
 
-SOURCES = TBNtupleAnalyzer.cc Runclustering.cc 
-HEADERS = TBNtupleAnalyzer.h Runclustering.h 
+SOURCES = TBNtupleAnalyzer.cc Runclustering.cc MyDict.cc
+HEADERS = TBNtupleAnalyzer.h Runclustering.h CLUEAlgoParameters.h
 OBJECTS = $(SOURCES:.cc=.o)
 
 EXECUTABLE = runclustering
 
 all: $(SOURCES) $(EXECUTABLE)
+
+MyDict.cc: CLUEAlgoParameters.h Linkdef.h
+	rootcling -f $@ $^
 
 %.o: %.cc
 	@echo Compiling $<...

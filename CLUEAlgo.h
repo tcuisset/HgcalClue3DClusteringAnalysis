@@ -2,33 +2,13 @@
 #define CLUEAlgo_h
 
 #include <cmath>
-#include <ostream>
 #include <array>
 
+#include "CLUEAlgoParameters.h"
 #include "LayerTiles.h"
 #include "PointsCloud.h"
 #include "Cluster.h"
 
-
-struct ClueAlgoParameters
-{
-    std::array<float, 2> deltac; ///< Critical distance parameters, index 0 for HGCAL, index 1 for AHCAL
-    std::array<float, 2> rhoc;
-    float outlierDeltaFactor;
-    /**
-     * When computing layer cluster position,
-     *  ignore cells that have the distance squared to the highest energy cell in layer cluster greater than this squared distance
-    */
-    float positionDeltaRho2;
-
-    friend std::ostream& operator<< (std::ostream& stream, const ClueAlgoParameters& p) {
-        stream << "deltac = " << p.deltac[0] 
-               << ", rhoc = " << p.rhoc[0]
-               << ", outlierDeltaFactor = " << p.outlierDeltaFactor
-               << ", positionDeltaRho2 = " << p.positionDeltaRho2;
-        return stream;
-    }
-};
 
 ///< 2-d distance on the layer
 inline float distance(PointsCloud const& points, int i, int j) {
