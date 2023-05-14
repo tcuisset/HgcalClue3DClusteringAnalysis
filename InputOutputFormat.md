@@ -49,6 +49,7 @@ rechits_* -> PointsCloud (vector branch) :
   // Output variables
   std::vector<float> rho; ///< Local energy density
   std::vector<float> delta; ///< Distance to nearest highest
+  std::vector<char> pointType; /// 0 is Follower, 1 is Seed, 2 is Outlier
 
 clus2D_* -> ClustersSoA (vector branch) : list of all 2D clusters info
   std::vector<float> x;
@@ -58,6 +59,6 @@ clus2D_* -> ClustersSoA (vector branch) : list of all 2D clusters info
   std::vector<int> layer;
   std::vector<int> size; ///< Number of hits per cluster
   std::vector<std::vector<int>> hitidxs; ///< List of hits IDs per cluster
-  also rho, delta
+  also rho, delta, pointType
   
 clus3D_* -> ClustersSoA (vector branch) : same but 3D clusters

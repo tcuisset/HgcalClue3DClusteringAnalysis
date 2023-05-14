@@ -24,7 +24,7 @@ inline float distance3d_squared(PointsCloud &points, int i, int j) {
     return std::sqrt( square(points.x[k]) + square(points.y[k]));
   };
   */
-  /* This is the way it is done in CJLST. Given our z is different than CMS z, using it is probably not a good idea (esp when z=0)
+  /* This is the way it is done in CMSSW. Given our z is different than CMS z, using it is probably not a good idea (esp when z=0)
   Could probably be made to work by shifting z by the distance between detectir center and firts layer of HGCAL
   return square(points.z[i]) * square( r(i)/std::abs(points.z[i]) + r(j)/std::abs(points.z[j]) )
       + square(r(j))/square(points.z[j]) * square(std::atan2(points.y[j], points.x[j]) - std::atan2(points.y[i], points.x[i]));
