@@ -405,6 +405,7 @@ void Runclustering::EventLoop(unsigned filterMinLayerClusterSize) {
   clusters_tree.Branch("rechits_y", &pcloud.y);
   clusters_tree.Branch("rechits_z", &pcloud.z);
   clusters_tree.Branch("rechits_energy", &pcloud.weight);
+  clusters_tree.Branch("rechits_energy_MIP", &ce_clean_energy_MIP);
   clusters_tree.Branch("rechits_layer", &pcloud.layer);
   clusters_tree.Branch("rechits_rho", &pcloud.rho);
   clusters_tree.Branch("rechits_delta", &pcloud.delta);

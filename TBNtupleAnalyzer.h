@@ -45,7 +45,8 @@ public :
    vector<float>   *ce_clean_y;
    vector<float>   *ce_clean_z;
    vector<unsigned int> *ce_clean_layer;
-   vector<float>   *ce_clean_energy_MeV;
+   vector<float>   *ce_clean_energy_MIP; ///< Rechit energies in MIP
+   vector<float>   *ce_clean_energy_MeV; ///< Rechit energies in MeV
    Float_t         beamEnergy;
    Float_t         trueBeamEnergy; // only filled if present in input dataset, ie for simulation
    vector<float>   *impactX;
@@ -108,6 +109,7 @@ void TBNtupleAnalyzer::Init(TTree *tree, bool shiftRechits)
    fChain->SetBranchAddress(TString("ce_clean_y")+rechitsShiftString, &ce_clean_y);
    fChain->SetBranchAddress("ce_clean_z", &ce_clean_z);
    fChain->SetBranchAddress("ce_clean_layer", &ce_clean_layer);
+   fChain->SetBranchAddress("ce_clean_energy", &ce_clean_energy_MIP);
    fChain->SetBranchAddress("ce_clean_energy_MeV", &ce_clean_energy_MeV);
    fChain->SetBranchAddress("beamEnergy", &beamEnergy);
 

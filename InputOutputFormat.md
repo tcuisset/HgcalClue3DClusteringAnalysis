@@ -45,6 +45,8 @@ rechits_* -> PointsCloud (vector branch) :
   std::vector<float> z;
   std::vector<unsigned int> layer; 
   std::vector<float> weight; ///< Weights of all points (ie energy) -> Called energy in tree
+  
+  std::vector<float> rechits_energy_MIP; ///< Rechits energy in MIPs (straight copy from ce_clean_energy)
 
   // Output variables
   std::vector<float> rho; ///< Local energy density
